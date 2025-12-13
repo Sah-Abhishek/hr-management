@@ -252,13 +252,30 @@ const LeaveBalancePage = () => {
                     </div>
                   );
                 })}
+                
+                {/* Comp-Off Balance */}
+                {(() => {
+                  const compOffBalance = getEmployeeCompOff(employee.id);
+                  return (
+                    <div className="p-4 rounded-lg border-2 bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-300 transition-all">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Gift className="w-4 h-4 text-emerald-600" />
+                        <p className="text-xs font-medium text-emerald-700 uppercase tracking-wider">
+                          Comp-Off
+                        </p>
+                      </div>
+                      <p className="text-2xl font-bold text-emerald-700">{compOffBalance}</p>
+                      <p className="text-xs text-emerald-600 mt-1">Extra earned days</p>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="mt-4 pt-4 border-t border-slate-200">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-slate-600">Total Balance:</span>
                   <span className="text-xl font-bold text-slate-900">
-                    {getTotalLeaves(employee.leave_balance)} days
+                    {getTotalLeaves(employee.leave_balance) + getEmployeeCompOff(employee.id)} days
                   </span>
                 </div>
               </div>
