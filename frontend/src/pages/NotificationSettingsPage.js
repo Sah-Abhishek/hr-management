@@ -282,15 +282,27 @@ const NotificationSettingsPage = () => {
                 </div>
               </form>
 
-              {/* Gmail Setup Guide */}
-              <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <h4 className="font-semibold text-slate-900 mb-2">Gmail Setup Guide:</h4>
-                <ol className="text-sm text-slate-600 space-y-1 list-decimal list-inside">
-                  <li>Go to Google Account → Security → 2-Step Verification</li>
-                  <li>Scroll to "App passwords" and create one</li>
-                  <li>Use the generated 16-character password above</li>
-                  <li>SMTP Host: smtp.gmail.com | Port: 587</li>
-                </ol>
+              {/* Setup Guides */}
+              <div className="mt-6 space-y-4">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <h4 className="font-semibold text-slate-900 mb-2">Gmail Setup:</h4>
+                  <ol className="text-sm text-slate-600 space-y-1 list-decimal list-inside">
+                    <li>Go to Google Account → Security → 2-Step Verification</li>
+                    <li>Scroll to "App passwords" and create one</li>
+                    <li>Host: smtp.gmail.com | Port: 587 | Username: Your Gmail</li>
+                  </ol>
+                </div>
+                
+                <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <h4 className="font-semibold text-emerald-900 mb-2">Mailjet Setup:</h4>
+                  <ol className="text-sm text-emerald-800 space-y-1 list-decimal list-inside">
+                    <li>Sign up at mailjet.com and verify your sender email</li>
+                    <li>Go to Account Settings → SMTP & Send API Settings</li>
+                    <li>Host: in-v3.mailjet.com | Port: 587</li>
+                    <li>Username: Your API Key | Password: Your Secret Key</li>
+                    <li>From Email: Your verified sender email</li>
+                  </ol>
+                </div>
               </div>
             </CardContent>
           </Card>
