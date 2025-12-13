@@ -572,6 +572,14 @@ const EmployeesPage = () => {
                     {employee.designation} - {employee.department}
                   </span>
                 </div>
+                
+                {employee.organization_name && (
+                  <div className="mt-2 pt-2 border-t border-slate-100">
+                    <Badge variant="outline" className="text-xs">
+                      {employee.organization_name}
+                    </Badge>
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 pt-4 border-t border-slate-100">
