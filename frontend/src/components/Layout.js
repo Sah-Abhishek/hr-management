@@ -32,6 +32,7 @@ const Layout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home, roles: ['admin', 'manager', 'employee'] },
     { name: 'Employees', href: '/employees', icon: Users, roles: ['admin', 'manager'] },
+    { name: 'Hierarchy', href: '/hierarchy', icon: Network, roles: ['admin', 'manager'] },
     { name: 'My Leaves', href: '/leaves', icon: FileText, roles: ['admin', 'manager', 'employee'] },
     { name: 'Approvals', href: '/approvals', icon: CheckSquare, roles: ['admin', 'manager'] },
     { name: 'Leave Policy', href: '/leave-policy', icon: FileText, roles: ['admin'] },
