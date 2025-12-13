@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Users, FileText, CheckSquare, User, LogOut, Menu, X, Settings } from 'lucide-react';
+import { Home, Users, FileText, CheckSquare, User, LogOut, Menu, X, Settings, Bell } from 'lucide-react';
 import { clearAuth, getAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
