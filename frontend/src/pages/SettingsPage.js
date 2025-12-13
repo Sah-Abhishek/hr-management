@@ -254,6 +254,81 @@ const SettingsPage = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Leave Types */}
+        <Card className="border-slate-100 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-2xl font-semibold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>
+              <Settings className="w-6 h-6" />
+              Leave Types
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Add Leave Type */}
+            <div className="space-y-2">
+              <Input
+                placeholder="Leave type name"
+                value={newLeaveType.name}
+                onChange={(e) => setNewLeaveType({ ...newLeaveType, name: e.target.value })}
+                onKeyPress={(e) => e.key === 'Enter' && newLeaveType.quota !== '' && addLeaveType()}
+                data-testid="new-leave-type-input"
+              />
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="Annual quota (0 for unlimited)"
+                  value={newLeaveType.quota}
+                  onChange={(e) => setNewLeaveType({ ...newLeaveType, quota: e.target.value })}
+                  className="flex-1"
+                  data-testid="new-leave-quota-input"
+                />
+                <Button
+                  onClick={addLeaveType}
+                  data-testid="add-leave-type-btn"
+                  className="bg-slate-800 hover:bg-slate-900 rounded-full px-4"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Leave Type List */}
+            <div className="space-y-2">
+              {leaveTypes.length === 0 ? (
+                <p className="text-center text-slate-500 py-4">No leave types added yet</p>
+              ) : (
+                leaveTypes.map((leaveType) => (
+                  <div
+                    key={leaveType.name}
+                    data-testid={`leave-type-${leaveType.name}`}
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <span className="text-slate-900 font-medium">{leaveType.name}</span>
+                      <span className="text-sm text-slate-500 ml-2">
+                        ({leaveType.quota === 0 ? 'Unlimited' : `${leaveType.quota} days/year`})
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => removeLeaveType(leaveType.name)}
+                      className="text-red-500 hover:text-red-700 transition-colors"
+                      data-testid={`remove-leave-type-${leaveType.name}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-slate-200">
+              <p className="text-xs text-slate-600">
+                <strong>Note:</strong> Leave types will be used across the system for leave applications and balance management.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
