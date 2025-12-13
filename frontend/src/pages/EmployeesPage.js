@@ -309,6 +309,18 @@ const EmployeesPage = () => {
           {selectedEmployee && (
             <form onSubmit={handleUpdateEmployee} className="space-y-4 mt-4">
               <div>
+                <Label htmlFor="edit-emp-id">Employee ID *</Label>
+                <Input
+                  id="edit-emp-id"
+                  placeholder="EMP1001"
+                  value={selectedEmployee.employee_id}
+                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, employee_id: e.target.value.toUpperCase() })}
+                  required
+                  className="mt-1"
+                />
+                <p className="text-xs text-slate-500 mt-1">Must be unique across all employees</p>
+              </div>
+              <div>
                 <Label htmlFor="edit-emp-name">Full Name *</Label>
                 <Input
                   id="edit-emp-name"
