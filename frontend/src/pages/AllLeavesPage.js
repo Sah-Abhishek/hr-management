@@ -276,7 +276,12 @@ const AllLeavesPage = () => {
                             {format(new Date(leave.start_date), 'MMM dd')} - {format(new Date(leave.end_date), 'MMM dd, yyyy')}
                           </p>
                         </div>
-                        <p className="text-xs text-slate-500 mt-1">{leave.days_count} day(s)</p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {leave.days_count} day(s)
+                          {leave.is_half_day && (
+                            <span> • Half Day ({leave.half_day_period})</span>
+                          )}
+                        </p>
                       </div>
                       <div className="bg-white p-3 rounded-lg border border-slate-200">
                         <p className="text-xs text-slate-500 mb-1">Applied On</p>
