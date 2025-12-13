@@ -264,6 +264,9 @@ const LeavesPage = () => {
                         </span>
                         <span className="text-slate-400">•</span>
                         <span>{leave.days_count} day{leave.days_count > 1 ? 's' : ''}</span>
+                        {leave.is_half_day && (
+                          <span className="text-slate-400"> • Half Day ({leave.half_day_period})</span>
+                        )}
                       </div>
                     </div>
                   </div>
