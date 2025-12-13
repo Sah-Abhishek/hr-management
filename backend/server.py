@@ -231,9 +231,13 @@ def require_role(allowed_roles: List[str]):
         return current_user
     return role_checker
 
-def calculate_days(start_date: datetime, end_date: datetime) -> int:
+def calculate_days(start_date: datetime, end_date: datetime, is_half_day: bool = False) -> float:
     delta = end_date - start_date
-    return delta.days + 1
+    days = delta.days + 1
+    
+    if is_half_day and days == 1:
+        return 0.5
+    return float(days)
 
 # ============= AUTH ENDPOINTS =============
 
