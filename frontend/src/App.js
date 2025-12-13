@@ -18,6 +18,7 @@ import HierarchyPage from '@/pages/HierarchyPage';
 import AllLeavesPage from '@/pages/AllLeavesPage';
 import LeaveBalancePage from '@/pages/LeaveBalancePage';
 import CompOffPage from '@/pages/CompOffPage';
+import OrganizationsPage from '@/pages/OrganizationsPage';
 import Layout from '@/components/Layout';
 
 const ProtectedRoute = ({ children }) => {
