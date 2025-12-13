@@ -758,33 +758,51 @@ async def apply_leave(
     
     await db.leaves.insert_one(leave_doc)
     
-    # Send notification to manager
+    # Send notification to manager AND admin
     try:
-        # Find manager by department
+        # Prepare email content
+        email_html = generate_leave_application_email(
+            employee_name=current_employee.full_name,
+            leave_type=leave_data.leave_type,
+            start_date=leave_data.start_date.strftime("%Y-%m-%d"),
+            end_date=leave_data.end_date.strftime("%Y-%m-%d"),
+            reason=leave_data.reason
+        )
+        
+        whatsapp_msg = f"New leave application from {current_employee.full_name}\nType: {leave_data.leave_type}\nDates: {leave_data.start_date.strftime('%Y-%m-%d')} to {leave_data.end_date.strftime('%Y-%m-%d')}\nReason: {leave_data.reason}"
+        
+        # Find and notify manager
         manager = await db.employees.find_one(
             {"department": current_employee.department, "role": "manager"},
             {"_id": 0}
         )
         
         if manager:
-            # Send email notification
-            email_html = generate_leave_application_email(
-                employee_name=current_employee.full_name,
-                leave_type=leave_data.leave_type,
-                start_date=leave_data.start_date.strftime("%Y-%m-%d"),
-                end_date=leave_data.end_date.strftime("%Y-%m-%d"),
-                reason=leave_data.reason
-            )
             await send_email_notification(
                 to_email=manager.get('email'),
                 subject=f"Leave Application from {current_employee.full_name}",
                 html_content=email_html
             )
+            logger.info(f"Leave notification sent to manager: {manager.get('email')}")
             
             # Send WhatsApp notification if phone available
             if manager.get('phone'):
-                whatsapp_msg = f"New leave application from {current_employee.full_name}\nType: {leave_data.leave_type}\nDates: {leave_data.start_date.strftime('%Y-%m-%d')} to {leave_data.end_date.strftime('%Y-%m-%d')}\nReason: {leave_data.reason}"
                 await send_whatsapp_notification(manager.get('phone'), whatsapp_msg)
+        
+        # Find and notify admin
+        admin = await db.employees.find_one({"role": "admin"}, {"_id": 0})
+        if admin and admin.get('email') != manager.get('email'):  # Don't send duplicate if admin is also manager
+            await send_email_notification(
+                to_email=admin.get('email'),
+                subject=f"Leave Application from {current_employee.full_name}",
+                html_content=email_html
+            )
+            logger.info(f"Leave notification sent to admin: {admin.get('email')}")
+            
+            # Send WhatsApp notification if phone available
+            if admin.get('phone'):
+                await send_whatsapp_notification(admin.get('phone'), whatsapp_msg)
+                
     except Exception as e:
         logger.error(f"Failed to send notification: {str(e)}")
     
