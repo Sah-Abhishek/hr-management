@@ -64,7 +64,7 @@ class UserRegister(BaseModel):
     department: str
     designation: str
     phone: Optional[str] = None
-    manager_email: Optional[EmailStr] = None
+    manager_email: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -100,7 +100,7 @@ class EmployeeCreate(BaseModel):
     designation: str
     phone: Optional[str] = None
     joining_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    manager_email: Optional[EmailStr] = None
+    manager_email: Optional[str] = None
     leave_balance: LeaveBalance = Field(default_factory=LeaveBalance)
 
 class Employee(BaseModel):
