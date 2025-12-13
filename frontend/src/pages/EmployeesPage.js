@@ -155,8 +155,8 @@ const EmployeesPage = () => {
       emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.designation.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesDepartment = filterDepartment === '' || emp.department === filterDepartment;
-    const matchesRole = filterRole === '' || emp.role === filterRole;
+    const matchesDepartment = filterDepartment === '' || filterDepartment === 'all' || emp.department === filterDepartment;
+    const matchesRole = filterRole === '' || filterRole === 'all' || emp.role === filterRole;
     
     return matchesSearch && matchesDepartment && matchesRole;
   });
