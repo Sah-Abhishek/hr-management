@@ -468,7 +468,12 @@ const EmployeesPage = () => {
                   <User className="w-7 h-7 text-slate-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-slate-900 text-lg truncate">{employee.full_name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-slate-900 text-lg truncate">{employee.full_name}</h3>
+                    <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                      {employee.employee_id}
+                    </span>
+                  </div>
                   <Badge className="mt-1 capitalize">{employee.role}</Badge>
                 </div>
                 {user?.role === 'admin' && (
