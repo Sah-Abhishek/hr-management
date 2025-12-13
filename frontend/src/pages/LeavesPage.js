@@ -62,6 +62,8 @@ const LeavesPage = () => {
         start_date: '',
         end_date: '',
         reason: '',
+        is_half_day: false,
+        half_day_period: 'morning',
       });
       fetchLeaves();
     } catch (error) {
