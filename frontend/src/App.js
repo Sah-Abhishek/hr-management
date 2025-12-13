@@ -17,6 +17,7 @@ import NotificationSettingsPage from '@/pages/NotificationSettingsPage';
 import HierarchyPage from '@/pages/HierarchyPage';
 import AllLeavesPage from '@/pages/AllLeavesPage';
 import LeaveBalancePage from '@/pages/LeaveBalancePage';
+import CompOffPage from '@/pages/CompOffPage';
 import Layout from '@/components/Layout';
 
 const ProtectedRoute = ({ children }) => {
