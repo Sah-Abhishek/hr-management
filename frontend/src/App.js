@@ -42,6 +42,7 @@ function App() {
             <Route index element={<DashboardPage />} />
             <Route path="employees" element={<EmployeesPage />} />
             <Route path="leaves" element={<LeavesPage />} />
+            <Route path="all-leaves" element={<AllLeavesPage />} />
             <Route path="approvals" element={<ApprovalsPage />} />
             <Route path="leave-policy" element={<LeavePolicyPage />} />
             <Route path="settings" element={<SettingsPage />} />
