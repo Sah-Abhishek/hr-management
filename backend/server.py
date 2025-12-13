@@ -404,8 +404,8 @@ async def create_employee(
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Create user
-    employee_id = str(uuid.uuid4())[:8].upper()
+    # Generate unique employee_id
+    employee_id = await generate_employee_id()
     hashed_password = get_password_hash(employee_data.password)
     
     user = User(
