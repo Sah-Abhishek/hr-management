@@ -258,32 +258,22 @@ const SettingsPage = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Add Leave Type */}
-            <div className="space-y-2">
+            <div className="flex gap-2">
               <Input
-                placeholder="Leave type name"
-                value={newLeaveType.name}
-                onChange={(e) => setNewLeaveType({ ...newLeaveType, name: e.target.value })}
-                onKeyPress={(e) => e.key === 'Enter' && newLeaveType.quota !== '' && addLeaveType()}
+                placeholder="Enter leave type name (e.g., Parental Leave)"
+                value={newLeaveType}
+                onChange={(e) => setNewLeaveType(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addLeaveType()}
                 data-testid="new-leave-type-input"
+                className="flex-1"
               />
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  min="0"
-                  placeholder="Annual quota (0 for unlimited)"
-                  value={newLeaveType.quota}
-                  onChange={(e) => setNewLeaveType({ ...newLeaveType, quota: e.target.value })}
-                  className="flex-1"
-                  data-testid="new-leave-quota-input"
-                />
-                <Button
-                  onClick={addLeaveType}
-                  data-testid="add-leave-type-btn"
-                  className="bg-slate-800 hover:bg-slate-900 rounded-full px-4"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
+              <Button
+                onClick={addLeaveType}
+                data-testid="add-leave-type-btn"
+                className="bg-slate-800 hover:bg-slate-900 rounded-full px-4"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
             </div>
 
             {/* Leave Type List */}
