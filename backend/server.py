@@ -513,6 +513,16 @@ class LeaveBalanceAdjustment(BaseModel):
     adjustment: float
     reason: str
 
+class CompOffGrant(BaseModel):
+    employee_id: str
+    employee_email: EmailStr
+    employee_name: str
+    days: float
+    work_date: str
+    reason: str
+    granted_by: EmailStr
+    granted_by_role: str
+
 @api_router.put("/employees/{employee_id}/leave-balance")
 async def adjust_leave_balance(
     employee_id: str,
