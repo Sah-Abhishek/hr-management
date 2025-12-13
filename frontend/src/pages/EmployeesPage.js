@@ -185,8 +185,9 @@ const EmployeesPage = () => {
     
     const matchesDepartment = filterDepartment === '' || filterDepartment === 'all' || emp.department === filterDepartment;
     const matchesRole = filterRole === '' || filterRole === 'all' || emp.role === filterRole;
+    const matchesOrganization = filterOrganization === '' || filterOrganization === 'all' || emp.organization_id === filterOrganization;
     
-    return matchesSearch && matchesDepartment && matchesRole;
+    return matchesSearch && matchesDepartment && matchesRole && matchesOrganization;
   });
 
   if (loading) {
