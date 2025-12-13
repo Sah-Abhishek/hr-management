@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import api from '@/lib/api';
 
 const NotificationSettingsPage = () => {
   const [emailEnabled, setEmailEnabled] = useState(false);
