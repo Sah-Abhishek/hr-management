@@ -13,7 +13,7 @@ const SettingsPage = () => {
   const [leaveTypes, setLeaveTypes] = useState([]);
   const [newDepartment, setNewDepartment] = useState('');
   const [newDesignation, setNewDesignation] = useState('');
-  const [newLeaveType, setNewLeaveType] = useState({ name: '', quota: '' });
+  const [newLeaveType, setNewLeaveType] = useState('');
 
   useEffect(() => {
     // Load from localStorage
