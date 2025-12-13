@@ -119,6 +119,7 @@ const EmployeesPage = () => {
     setSubmitting(true);
 
     try {
+      // First update the employee profile
       await api.put(`/employees/${selectedEmployee.id}`, {
         full_name: selectedEmployee.full_name,
         department: selectedEmployee.department,
@@ -126,6 +127,10 @@ const EmployeesPage = () => {
         phone: selectedEmployee.phone,
         manager_email: selectedEmployee.manager_email === 'none' ? '' : selectedEmployee.manager_email,
       });
+
+      // If role changed, we need to update the user record (backend handles this)
+      // The role is stored in the users collection, so we need a separate endpoint
+      
       toast.success('Employee updated successfully!');
       setEditDialogOpen(false);
       setSelectedEmployee(null);
@@ -145,6 +150,16 @@ const EmployeesPage = () => {
       toast.error(errorMessage);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRoleChange = async (employeeId, newRole) => {
+    try {
+      await api.put(`/employees/${employeeId}/role`, { role: newRole });
+      toast.success(`Role updated to ${newRole}`);
+      fetchEmployees();
+    } catch (error) {
+      toast.error('Failed to update role');
     }
   };
 
