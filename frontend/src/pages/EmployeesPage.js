@@ -128,6 +128,7 @@ const EmployeesPage = () => {
         designation: selectedEmployee.designation,
         phone: selectedEmployee.phone,
         manager_email: selectedEmployee.manager_email === 'none' ? '' : selectedEmployee.manager_email,
+        employee_id: selectedEmployee.employee_id,
       });
 
       // If role changed, update it separately
