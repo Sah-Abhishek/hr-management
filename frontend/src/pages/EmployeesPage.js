@@ -201,7 +201,7 @@ const EmployeesPage = () => {
                       <SelectValue placeholder="Select manager (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Manager</SelectItem>
+                      <SelectItem value="none">No Manager</SelectItem>
                       {managers.map(manager => (
                         <SelectItem key={manager.email} value={manager.email}>
                           {manager.full_name} ({manager.role})
