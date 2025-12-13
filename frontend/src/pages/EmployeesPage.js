@@ -369,6 +369,27 @@ const EmployeesPage = () => {
                 />
               </div>
               <div>
+                <Label htmlFor="edit-emp-role">Role *</Label>
+                <Select
+                  value={selectedEmployee.role}
+                  onValueChange={(value) => setSelectedEmployee({ ...selectedEmployee, role: value })}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="employee">Employee</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-amber-600 mt-1">
+                  {selectedEmployee.role === 'manager' && 'Managers can approve leave requests from their team'}
+                  {selectedEmployee.role === 'admin' && 'Admins have full system access'}
+                  {selectedEmployee.role === 'employee' && 'Regular employee access'}
+                </p>
+              </div>
+              <div>
                 <Label htmlFor="edit-emp-phone">Phone Number *</Label>
                 <Input
                   id="edit-emp-phone"
