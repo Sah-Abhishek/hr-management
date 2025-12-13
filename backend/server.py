@@ -564,16 +564,27 @@ async def create_employee(
     
     await db.users.insert_one(user_doc)
     
+    # Get organization name if organization_id is provided
+    organization_name = None
+    if employee_data.organization_id:
+        org = await db.organizations.find_one({"id": employee_data.organization_id}, {"_id": 0})
+        if org:
+            organization_name = org.get('name')
+    
     # Auto-assign manager based on department if employee role
     manager_email = employee_data.manager_email
     manager_name = None
     
     if employee_data.role == UserRole.EMPLOYEE and not manager_email:
-        # Find a manager in the same department
-        dept_manager = await db.employees.find_one({
+        # Find a manager in the same department and organization
+        query = {
             "department": employee_data.department,
             "role": UserRole.MANAGER
-        }, {"_id": 0})
+        }
+        if employee_data.organization_id:
+            query["organization_id"] = employee_data.organization_id
+            
+        dept_manager = await db.employees.find_one(query, {"_id": 0})
         
         if dept_manager:
             manager_email = dept_manager['email']
@@ -592,6 +603,8 @@ async def create_employee(
         department=employee_data.department,
         designation=employee_data.designation,
         phone=employee_data.phone,
+        organization_id=employee_data.organization_id,
+        organization_name=organization_name,
         joining_date=employee_data.joining_date,
         manager_email=manager_email,
         manager_name=manager_name,
