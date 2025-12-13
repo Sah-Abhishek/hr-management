@@ -16,10 +16,15 @@ const EmployeesPage = () => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { user } = getAuth();
   const [departments, setDepartments] = useState([]);
   const [managers, setManagers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
+  const [filterRole, setFilterRole] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
 
   const [employeeForm, setEmployeeForm] = useState({
     email: '',
