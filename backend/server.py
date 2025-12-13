@@ -508,6 +508,65 @@ async def delete_employee(
     
     return {"message": "Employee deleted successfully"}
 
+class LeaveBalanceAdjustment(BaseModel):
+    leave_type: str
+    adjustment: float
+    reason: str
+
+@api_router.put("/employees/{employee_id}/leave-balance")
+async def adjust_leave_balance(
+    employee_id: str,
+    adjustment_data: LeaveBalanceAdjustment,
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
+):
+    # Check if employee exists
+    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Validate leave type key
+    valid_keys = ['sick_leave', 'casual_leave', 'paid_leave', 'unpaid_leave']
+    if adjustment_data.leave_type not in valid_keys:
+        raise HTTPException(status_code=400, detail="Invalid leave type")
+    
+    # Get current balance
+    current_balance = employee.get('leave_balance', {}).get(adjustment_data.leave_type, 0)
+    new_balance = current_balance + adjustment_data.adjustment
+    
+    # Prevent negative balance
+    if new_balance < 0:
+        raise HTTPException(status_code=400, detail="Cannot deduct more than available balance")
+    
+    # Update balance
+    await db.employees.update_one(
+        {"id": employee_id},
+        {"$set": {f"leave_balance.{adjustment_data.leave_type}": new_balance}}
+    )
+    
+    # Log the adjustment (optional - for audit trail)
+    adjustment_log = {
+        "employee_id": employee_id,
+        "employee_email": employee['email'],
+        "leave_type": adjustment_data.leave_type,
+        "adjustment": adjustment_data.adjustment,
+        "reason": adjustment_data.reason,
+        "adjusted_by": current_user.email,
+        "adjusted_by_role": current_user.role,
+        "previous_balance": current_balance,
+        "new_balance": new_balance,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    await db.leave_adjustments.insert_one(adjustment_log)
+    
+    return {
+        "message": "Leave balance adjusted successfully",
+        "employee_id": employee_id,
+        "leave_type": adjustment_data.leave_type,
+        "previous_balance": current_balance,
+        "adjustment": adjustment_data.adjustment,
+        "new_balance": new_balance
+    }
+
 # ============= LEAVE ENDPOINTS =============
 
 @api_router.post("/leaves", response_model=Leave)
