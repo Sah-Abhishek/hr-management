@@ -64,6 +64,7 @@ class UserRegister(BaseModel):
     department: str
     designation: str
     phone: Optional[str] = None
+    organization_id: Optional[str] = None
     manager_email: Optional[str] = None
 
 class UserLogin(BaseModel):
@@ -108,6 +109,7 @@ class EmployeeCreate(BaseModel):
     department: str
     designation: str
     phone: Optional[str] = None
+    organization_id: Optional[str] = None
     joining_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     manager_email: Optional[str] = None
     leave_balance: LeaveBalance = Field(default_factory=LeaveBalance)
@@ -121,6 +123,8 @@ class Employee(BaseModel):
     department: str
     designation: str
     phone: Optional[str] = None
+    organization_id: Optional[str] = None
+    organization_name: Optional[str] = None
     joining_date: datetime
     manager_email: Optional[str] = None
     manager_name: Optional[str] = None
@@ -132,6 +136,7 @@ class EmployeeUpdate(BaseModel):
     department: Optional[str] = None
     designation: Optional[str] = None
     phone: Optional[str] = None
+    organization_id: Optional[str] = None
     manager_email: Optional[str] = None
     employee_id: Optional[str] = None
 
