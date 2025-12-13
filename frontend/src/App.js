@@ -41,6 +41,7 @@ function App() {
             <Route path="leaves" element={<LeavesPage />} />
             <Route path="approvals" element={<ApprovalsPage />} />
             <Route path="leave-policy" element={<LeavePolicyPage />} />
+            <Route path="settings" element={<SettingsPage />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
