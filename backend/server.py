@@ -809,6 +809,67 @@ async def action_on_leave(
         {"$set": update_doc}
     )
     
+    # Send notifications
+    try:
+        # Get employee details
+        employee = await db.employees.find_one({"email": leave.employee_email}, {"_id": 0})
+        
+        if new_status in [LeaveStatus.APPROVED, LeaveStatus.REJECTED]:
+            # Notify employee
+            status_text = "approved" if new_status == LeaveStatus.APPROVED else "rejected"
+            email_html = generate_leave_approval_email(
+                employee_name=leave.employee_name,
+                leave_type=leave.leave_type,
+                start_date=leave.start_date.strftime("%Y-%m-%d"),
+                end_date=leave.end_date.strftime("%Y-%m-%d"),
+                status=status_text
+            )
+            await send_email_notification(
+                to_email=leave.employee_email,
+                subject=f"Leave {status_text.capitalize()} - {leave.leave_type}",
+                html_content=email_html
+            )
+            
+            # Send WhatsApp if phone available
+            if employee and employee.get('phone'):
+                whatsapp_msg = f"Your leave application has been {status_text.upper()}!\n\nType: {leave.leave_type}\nDates: {leave.start_date.strftime('%Y-%m-%d')} to {leave.end_date.strftime('%Y-%m-%d')}"
+                await send_whatsapp_notification(employee.get('phone'), whatsapp_msg)
+        
+        elif new_status == LeaveStatus.MANAGER_APPROVED:
+            # Notify admin and employee
+            email_html = generate_leave_approval_email(
+                employee_name=leave.employee_name,
+                leave_type=leave.leave_type,
+                start_date=leave.start_date.strftime("%Y-%m-%d"),
+                end_date=leave.end_date.strftime("%Y-%m-%d"),
+                status="approved by manager (pending admin approval)"
+            )
+            
+            # Notify employee
+            await send_email_notification(
+                to_email=leave.employee_email,
+                subject=f"Leave Approved by Manager - Pending Admin Approval",
+                html_content=email_html
+            )
+            
+            # Notify admin
+            admin = await db.employees.find_one({"role": "admin"}, {"_id": 0})
+            if admin:
+                admin_html = generate_leave_application_email(
+                    employee_name=leave.employee_name,
+                    leave_type=leave.leave_type,
+                    start_date=leave.start_date.strftime("%Y-%m-%d"),
+                    end_date=leave.end_date.strftime("%Y-%m-%d"),
+                    reason=leave.reason
+                )
+                await send_email_notification(
+                    to_email=admin.get('email'),
+                    subject=f"Leave Approved by Manager - {leave.employee_name}",
+                    html_content=admin_html
+                )
+    except Exception as e:
+        logger.error(f"Failed to send notification: {str(e)}")
+    
     return leave
 
 # ============= DASHBOARD ENDPOINTS =============
