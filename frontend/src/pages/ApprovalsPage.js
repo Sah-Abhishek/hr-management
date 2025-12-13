@@ -235,6 +235,9 @@ const ApprovalsPage = () => {
                 <p className="font-medium text-slate-900 mb-1">{actionDialog.leave.employee_name}</p>
                 <p className="text-sm text-slate-600">
                   {actionDialog.leave.leave_type} - {actionDialog.leave.days_count} day(s)
+                  {actionDialog.leave.is_half_day && (
+                    <span> • Half Day ({actionDialog.leave.half_day_period})</span>
+                  )}
                 </p>
               </div>
             )}
