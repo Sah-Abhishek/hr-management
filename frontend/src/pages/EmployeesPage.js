@@ -24,7 +24,9 @@ const EmployeesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterRole, setFilterRole] = useState('');
+  const [filterOrganization, setFilterOrganization] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [organizations, setOrganizations] = useState([]);
 
   const [employeeForm, setEmployeeForm] = useState({
     email: '',
@@ -32,13 +34,24 @@ const EmployeesPage = () => {
     full_name: '',
     department: '',
     phone: '',
+    organization_id: '',
     manager_email: '',
   });
 
   useEffect(() => {
     fetchEmployees();
     loadDepartments();
+    fetchOrganizations();
   }, []);
+
+  const fetchOrganizations = async () => {
+    try {
+      const response = await api.get('/organizations');
+      setOrganizations(response.data);
+    } catch (error) {
+      console.error('Failed to fetch organizations:', error);
+    }
+  };
 
   const loadDepartments = () => {
     const savedDepts = localStorage.getItem('departments');
