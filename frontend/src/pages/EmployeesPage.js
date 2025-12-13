@@ -307,6 +307,106 @@ const EmployeesPage = () => {
         )}
       </div>
 
+      {/* Edit Employee Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Employee</DialogTitle>
+          </DialogHeader>
+          {selectedEmployee && (
+            <form onSubmit={handleUpdateEmployee} className="space-y-4 mt-4">
+              <div>
+                <Label htmlFor="edit-emp-name">Full Name *</Label>
+                <Input
+                  id="edit-emp-name"
+                  placeholder="John Doe"
+                  value={selectedEmployee.full_name}
+                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, full_name: e.target.value })}
+                  required
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-emp-department">Department *</Label>
+                <Select
+                  value={selectedEmployee.department}
+                  onValueChange={(value) => setSelectedEmployee({ ...selectedEmployee, department: value })}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map(dept => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-emp-designation">Designation *</Label>
+                <Input
+                  id="edit-emp-designation"
+                  placeholder="Software Engineer"
+                  value={selectedEmployee.designation}
+                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, designation: e.target.value })}
+                  required
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-emp-phone">Phone Number *</Label>
+                <Input
+                  id="edit-emp-phone"
+                  type="tel"
+                  placeholder="+1234567890"
+                  value={selectedEmployee.phone}
+                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, phone: e.target.value })}
+                  required
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-emp-manager">Manager</Label>
+                <Select
+                  value={selectedEmployee.manager_email || 'none'}
+                  onValueChange={(value) => setSelectedEmployee({ ...selectedEmployee, manager_email: value })}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select manager (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Manager</SelectItem>
+                    {managers.map(manager => (
+                      <SelectItem key={manager.email} value={manager.email}>
+                        {manager.full_name} ({manager.role})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditDialogOpen(false)}
+                  className="flex-1"
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-slate-800 hover:bg-slate-900"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Updating...' : 'Update Employee'}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-lg border border-slate-200">
         <div className="flex-1">
