@@ -915,7 +915,7 @@ async def action_on_leave(
             # Notify employee
             await send_email_notification(
                 to_email=leave.employee_email,
-                subject=f"Leave Approved by Manager - Pending Admin Approval",
+                subject="Leave Approved by Manager - Pending Admin Approval",
                 html_content=email_html
             )
             
