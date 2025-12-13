@@ -256,6 +256,26 @@ const EmployeesPage = () => {
                   />
                 </div>
                 <div>
+                  <Label htmlFor="emp-organization">Organization</Label>
+                  <Select
+                    value={employeeForm.organization_id}
+                    onValueChange={(value) => setEmployeeForm({ ...employeeForm, organization_id: value })}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select organization (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {organizations.map(org => (
+                        <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {organizations.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-1">Go to Organizations to add organizations</p>
+                  )}
+                </div>
+                <div>
                   <Label htmlFor="emp-department">Department *</Label>
                   <Select
                     value={employeeForm.department}
