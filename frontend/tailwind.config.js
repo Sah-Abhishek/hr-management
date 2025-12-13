@@ -7,6 +7,10 @@ module.exports = {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['Public Sans', 'sans-serif'],
+  			heading: ['Plus Jakarta Sans', 'sans-serif'],
+  		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
