@@ -382,6 +382,98 @@ async def login(credentials: UserLogin):
 async def get_me(current_employee: Employee = Depends(get_current_employee)):
     return current_employee
 
+# ============= ORGANIZATION ENDPOINTS =============
+
+@api_router.post("/organizations", response_model=Organization)
+async def create_organization(
+    org_data: dict,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Create a new organization"""
+    org = Organization(
+        name=org_data.get('name'),
+        logo_url=org_data.get('logo_url'),
+        description=org_data.get('description'),
+        created_by=current_user.email
+    )
+    
+    org_doc = org.model_dump()
+    org_doc['created_at'] = org_doc['created_at'].isoformat()
+    
+    await db.organizations.insert_one(org_doc)
+    return org
+
+@api_router.get("/organizations", response_model=List[Organization])
+async def get_organizations(
+    current_user: User = Depends(get_current_user)
+):
+    """Get all organizations"""
+    orgs = await db.organizations.find({}, {"_id": 0}).to_list(1000)
+    
+    for org in orgs:
+        if 'created_at' in org and isinstance(org['created_at'], str):
+            org['created_at'] = datetime.fromisoformat(org['created_at'])
+    
+    return orgs
+
+@api_router.put("/organizations/{org_id}", response_model=Organization)
+async def update_organization(
+    org_id: str,
+    org_data: dict,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Update organization details"""
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    update_dict = {}
+    if 'name' in org_data:
+        update_dict['name'] = org_data['name']
+    if 'logo_url' in org_data:
+        update_dict['logo_url'] = org_data['logo_url']
+    if 'description' in org_data:
+        update_dict['description'] = org_data['description']
+    
+    if update_dict:
+        await db.organizations.update_one(
+            {"id": org_id},
+            {"$set": update_dict}
+        )
+        
+        # Update organization_name in all employees
+        if 'name' in update_dict:
+            await db.employees.update_many(
+                {"organization_id": org_id},
+                {"$set": {"organization_name": update_dict['name']}}
+            )
+    
+    updated_org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if 'created_at' in updated_org and isinstance(updated_org['created_at'], str):
+        updated_org['created_at'] = datetime.fromisoformat(updated_org['created_at'])
+    
+    return Organization(**updated_org)
+
+@api_router.delete("/organizations/{org_id}")
+async def delete_organization(
+    org_id: str,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Delete an organization"""
+    # Check if there are employees in this organization
+    employee_count = await db.employees.count_documents({"organization_id": org_id})
+    if employee_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete organization with {employee_count} employees. Please reassign or remove employees first."
+        )
+    
+    result = await db.organizations.delete_one({"id": org_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    return {"status": "success", "message": "Organization deleted"}
+
 # ============= EMPLOYEE ENDPOINTS =============
 
 async def get_employee_id_settings():
