@@ -17,6 +17,7 @@ const LeavesPage = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [leaveTypes, setLeaveTypes] = useState([]);
 
   const [leaveForm, setLeaveForm] = useState({
     leave_type: 'Sick Leave',
