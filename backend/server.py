@@ -1243,6 +1243,334 @@ async def get_comp_off_records(
     records = await db.comp_off_records.find({}, {"_id": 0}).to_list(1000)
     return records
 
+# ============= PAYROLL & SALARY ENDPOINTS =============
+
+@api_router.post("/payroll/send-salary-slip")
+async def send_salary_slip(
+    data: dict,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Send salary slip email to employee for a specific month"""
+    employee_id = data.get('employee_id')
+    month_year = data.get('month')  # Format: YYYY-MM
+    
+    # Get employee
+    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    if not employee.get('monthly_salary'):
+        raise HTTPException(status_code=400, detail="Employee salary not configured")
+    
+    # Parse month
+    year, month = month_year.split('-')
+    month_name = datetime(int(year), int(month), 1).strftime('%B %Y')
+    
+    # Get leaves for that month
+    leaves = await db.leaves.find({
+        "employee_id": employee_id,
+        "$expr": {
+            "$and": [
+                {"$eq": [{"$year": {"$toDate": "$start_date"}}, int(year)]},
+                {"$eq": [{"$month": {"$toDate": "$start_date"}}, int(month)]}
+            ]
+        }
+    }, {"_id": 0}).to_list(1000)
+    
+    # Calculate leave days
+    approved_leaves = [l for l in leaves if l['status'] == 'approved']
+    unpaid_leaves = [l for l in approved_leaves if l['leave_type'] == 'Unpaid Leave']
+    
+    total_leave_days = sum(l['days_count'] for l in approved_leaves)
+    unpaid_days = sum(l['days_count'] for l in unpaid_leaves)
+    
+    # Calculate working days (assume 22 working days per month)
+    working_days_in_month = 22
+    actual_working_days = working_days_in_month - total_leave_days
+    
+    # Calculate salary
+    base_salary = employee['monthly_salary']
+    per_day_salary = base_salary / working_days_in_month
+    unpaid_deduction = unpaid_days * per_day_salary
+    net_salary = base_salary - unpaid_deduction
+    
+    # Generate email HTML
+    email_html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">Salary Slip</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0;">{month_name}</p>
+        </div>
+        
+        <div style="background: white; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
+            <!-- Employee Details -->
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+                <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px;">Employee Details</h2>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b; width: 40%;">Employee Name:</td>
+                        <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">{employee['full_name']}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b;">Employee ID:</td>
+                        <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">{employee.get('id', 'N/A')}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b;">Department:</td>
+                        <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">{employee['department']}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #64748b;">Designation:</td>
+                        <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">{employee['designation']}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Attendance Summary -->
+            <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #10b981;">
+                <h2 style="margin: 0 0 15px 0; color: #166534; font-size: 18px;">Attendance Summary</h2>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; color: #15803d;">Total Working Days:</td>
+                        <td style="padding: 8px 0; color: #166534; font-weight: 600; text-align: right;">{working_days_in_month} days</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #15803d;">Leaves Taken:</td>
+                        <td style="padding: 8px 0; color: #166534; font-weight: 600; text-align: right;">{total_leave_days} days</td>
+                    </tr>
+                    <tr style="border-top: 2px solid #86efac; border-bottom: 2px solid #86efac;">
+                        <td style="padding: 12px 0; color: #166534; font-weight: 600;">Days Worked:</td>
+                        <td style="padding: 12px 0; color: #166534; font-weight: 700; text-align: right; font-size: 18px;">{actual_working_days} days</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Salary Breakdown -->
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+                <h2 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px;">Salary Breakdown</h2>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 10px 0; color: #64748b;">Base Salary:</td>
+                        <td style="padding: 10px 0; color: #1e293b; font-weight: 600; text-align: right;">₹{base_salary:,.2f}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; color: #64748b;">Per Day Salary:</td>
+                        <td style="padding: 10px 0; color: #64748b; text-align: right;">₹{per_day_salary:,.2f}</td>
+                    </tr>
+                    {f'''
+                    <tr style="background: #fee2e2; border-left: 3px solid #ef4444;">
+                        <td style="padding: 10px; color: #991b1b;">Unpaid Leave Deduction ({unpaid_days} days):</td>
+                        <td style="padding: 10px; color: #991b1b; font-weight: 600; text-align: right;">- ₹{unpaid_deduction:,.2f}</td>
+                    </tr>
+                    ''' if unpaid_days > 0 else ''}
+                </table>
+            </div>
+            
+            <!-- Net Salary -->
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 25px; border-radius: 8px; text-align: center;">
+                <p style="color: rgba(255,255,255,0.9); margin: 0 0 10px 0; font-size: 16px;">Net Salary</p>
+                <h1 style="color: white; margin: 0; font-size: 36px; font-weight: 700;">₹{net_salary:,.2f}</h1>
+            </div>
+            
+            <!-- Leave Details -->
+            {f'''
+            <div style="margin-top: 25px; padding: 20px; background: #fffbeb; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                <h3 style="margin: 0 0 15px 0; color: #92400e;">Leave Details</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #fcd34d;">
+                            <th style="text-align: left; padding: 10px 0; color: #78350f;">Type</th>
+                            <th style="text-align: center; padding: 10px 0; color: #78350f;">Dates</th>
+                            <th style="text-align: right; padding: 10px 0; color: #78350f;">Days</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {''.join([f'''
+                        <tr>
+                            <td style="padding: 8px 0; color: #92400e;">{leave['leave_type']}</td>
+                            <td style="padding: 8px 0; color: #92400e; text-align: center; font-size: 13px;">
+                                {datetime.fromisoformat(leave['start_date']).strftime('%d %b')} - {datetime.fromisoformat(leave['end_date']).strftime('%d %b')}
+                            </td>
+                            <td style="padding: 8px 0; color: #92400e; text-align: right; font-weight: 600;">{leave['days_count']}</td>
+                        </tr>
+                        ''' for leave in approved_leaves])}
+                    </tbody>
+                </table>
+            </div>
+            ''' if approved_leaves else ''}
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e2e8f0; text-align: center;">
+                <p style="color: #64748b; font-size: 12px; margin: 0;">
+                    This is a system-generated salary slip. For queries, please contact HR.
+                </p>
+                <p style="color: #94a3b8; font-size: 11px; margin: 10px 0 0 0;">
+                    Generated on {datetime.now().strftime('%d %B %Y at %I:%M %p')}
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Send email
+    try:
+        await send_email_notification(
+            to_email=employee['email'],
+            subject=f"Salary Slip - {month_name}",
+            html_content=email_html
+        )
+        
+        return {
+            "status": "success",
+            "message": f"Salary slip sent to {employee['full_name']}",
+            "details": {
+                "base_salary": base_salary,
+                "net_salary": net_salary,
+                "unpaid_deduction": unpaid_deduction,
+                "working_days": actual_working_days,
+                "leave_days": total_leave_days
+            }
+        }
+    except Exception as e:
+        logger.error(f"Failed to send salary slip: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to send salary slip")
+
+@api_router.get("/payroll/employee-report/{employee_id}/{month}")
+async def get_employee_payroll_report(
+    employee_id: str,
+    month: str,  # Format: YYYY-MM
+    current_user: User = Depends(get_current_user)
+):
+    """Get payroll report for an employee for a specific month"""
+    # Allow employee to see their own report or admin/manager to see anyone's
+    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    if current_user.role not in ['admin', 'manager'] and current_user.email != employee['email']:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Parse month
+    year, month_num = month.split('-')
+    
+    # Get leaves
+    leaves = await db.leaves.find({
+        "employee_id": employee_id,
+        "$expr": {
+            "$and": [
+                {"$eq": [{"$year": {"$toDate": "$start_date"}}, int(year)]},
+                {"$eq": [{"$month": {"$toDate": "$start_date"}}, int(month_num)]}
+            ]
+        }
+    }, {"_id": 0}).to_list(1000)
+    
+    approved_leaves = [l for l in leaves if l['status'] == 'approved']
+    unpaid_leaves = [l for l in approved_leaves if l['leave_type'] == 'Unpaid Leave']
+    
+    total_leave_days = sum(l['days_count'] for l in approved_leaves)
+    unpaid_days = sum(l['days_count'] for l in unpaid_leaves)
+    
+    working_days_in_month = 22
+    actual_working_days = working_days_in_month - total_leave_days
+    
+    salary_data = None
+    if employee.get('monthly_salary'):
+        base_salary = employee['monthly_salary']
+        per_day_salary = base_salary / working_days_in_month
+        unpaid_deduction = unpaid_days * per_day_salary
+        net_salary = base_salary - unpaid_deduction
+        
+        salary_data = {
+            "base_salary": base_salary,
+            "per_day_salary": per_day_salary,
+            "unpaid_deduction": unpaid_deduction,
+            "net_salary": net_salary
+        }
+    
+    return {
+        "employee": {
+            "id": employee['id'],
+            "name": employee['full_name'],
+            "email": employee['email'],
+            "department": employee['department'],
+            "designation": employee['designation']
+        },
+        "month": month,
+        "attendance": {
+            "working_days_in_month": working_days_in_month,
+            "leave_days": total_leave_days,
+            "unpaid_days": unpaid_days,
+            "actual_working_days": actual_working_days
+        },
+        "leaves": approved_leaves,
+        "salary": salary_data
+    }
+
+@api_router.get("/payroll/monthly-summary/{month}")
+async def get_monthly_payroll_summary(
+    month: str,  # Format: YYYY-MM
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Get payroll summary for all employees for a specific month"""
+    year, month_num = month.split('-')
+    
+    employees = await db.employees.find({}, {"_id": 0}).to_list(10000)
+    
+    payroll_summary = []
+    total_payroll = 0
+    
+    for employee in employees:
+        if not employee.get('monthly_salary'):
+            continue
+        
+        # Get leaves for this employee
+        leaves = await db.leaves.find({
+            "employee_id": employee['id'],
+            "$expr": {
+                "$and": [
+                    {"$eq": [{"$year": {"$toDate": "$start_date"}}, int(year)]},
+                    {"$eq": [{"$month": {"$toDate": "$start_date"}}, int(month_num)]}
+                ]
+            }
+        }, {"_id": 0}).to_list(1000)
+        
+        approved_leaves = [l for l in leaves if l['status'] == 'approved']
+        unpaid_leaves = [l for l in approved_leaves if l['leave_type'] == 'Unpaid Leave']
+        
+        total_leave_days = sum(l['days_count'] for l in approved_leaves)
+        unpaid_days = sum(l['days_count'] for l in unpaid_leaves)
+        
+        working_days_in_month = 22
+        actual_working_days = working_days_in_month - total_leave_days
+        
+        base_salary = employee['monthly_salary']
+        per_day_salary = base_salary / working_days_in_month
+        unpaid_deduction = unpaid_days * per_day_salary
+        net_salary = base_salary - unpaid_deduction
+        
+        total_payroll += net_salary
+        
+        payroll_summary.append({
+            "employee_id": employee['id'],
+            "employee_name": employee['full_name'],
+            "department": employee['department'],
+            "designation": employee['designation'],
+            "base_salary": base_salary,
+            "working_days": actual_working_days,
+            "leave_days": total_leave_days,
+            "unpaid_days": unpaid_days,
+            "unpaid_deduction": unpaid_deduction,
+            "net_salary": net_salary
+        })
+    
+    return {
+        "month": month,
+        "total_employees": len(payroll_summary),
+        "total_payroll": total_payroll,
+        "employees": payroll_summary
+    }
+
 # ============= NOTIFICATION SYSTEM =============
 
 class NotificationSettings(BaseModel):
