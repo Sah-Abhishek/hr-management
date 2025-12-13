@@ -142,6 +142,7 @@ const EmployeesPage = () => {
         department: selectedEmployee.department,
         designation: selectedEmployee.designation,
         phone: selectedEmployee.phone,
+        organization_id: selectedEmployee.organization_id || null,
         manager_email: selectedEmployee.manager_email === 'none' ? '' : selectedEmployee.manager_email,
         employee_id: selectedEmployee.employee_id,
       });
