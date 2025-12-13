@@ -52,6 +52,7 @@ function App() {
             <Route path="leave-policy" element={<LeavePolicyPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="notifications" element={<NotificationSettingsPage />} />
+            <Route path="organizations" element={<OrganizationsPage />} />
             <Route path="hierarchy" element={<HierarchyPage />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
