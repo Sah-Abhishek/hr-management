@@ -53,6 +53,11 @@ const EmployeesPage = () => {
     try {
       const response = await api.get('/employees');
       setEmployees(response.data);
+      // Filter managers for dropdown
+      const managerList = response.data.filter(emp => 
+        emp.role === 'manager' || emp.role === 'admin'
+      );
+      setManagers(managerList);
     } catch (error) {
       console.error('Failed to fetch employees:', error);
       toast.error('Failed to load employees');
