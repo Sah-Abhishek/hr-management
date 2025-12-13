@@ -617,6 +617,36 @@ async def adjust_leave_balance(
         "new_balance": new_balance
     }
 
+class EmployeeIdSettings(BaseModel):
+    prefix: str = "EMP"
+    counter: int = 1000
+
+@api_router.get("/employee-id-settings", response_model=EmployeeIdSettings)
+async def get_employee_id_settings_endpoint(
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Get current employee ID settings"""
+    settings = await db.employee_id_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return EmployeeIdSettings()
+    return EmployeeIdSettings(**settings)
+
+@api_router.post("/employee-id-settings")
+async def update_employee_id_settings(
+    settings: EmployeeIdSettings,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Update employee ID settings"""
+    settings_dict = settings.model_dump()
+    settings_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    settings_dict["updated_by"] = current_user.email
+    
+    # Upsert settings
+    await db.employee_id_settings.delete_many({})
+    await db.employee_id_settings.insert_one(settings_dict)
+    
+    return {"message": "Employee ID settings updated successfully", "settings": settings_dict}
+
 # ============= LEAVE ENDPOINTS =============
 
 @api_router.post("/leaves", response_model=Leave)
