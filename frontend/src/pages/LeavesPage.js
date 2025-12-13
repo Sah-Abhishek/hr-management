@@ -302,7 +302,7 @@ const LeavesPage = () => {
             <div className="text-center py-12 text-slate-500">
               <Calendar className="w-16 h-16 mx-auto mb-4 text-slate-300" />
               <p className="text-lg mb-2">No leave applications yet</p>
-              <p className="text-sm">Click "Apply Leave" to submit your first application</p>
+              <p className="text-sm">Click &quot;Apply Leave&quot; to submit your first application</p>
             </div>
           )}
         </CardContent>
