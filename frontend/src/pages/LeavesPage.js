@@ -166,6 +166,37 @@ const LeavesPage = () => {
                   />
                 </div>
               </div>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    id="is-half-day"
+                    type="checkbox"
+                    checked={leaveForm.is_half_day}
+                    onChange={(e) => setLeaveForm({ ...leaveForm, is_half_day: e.target.checked })}
+                    className="rounded border-slate-300"
+                  />
+                  <Label htmlFor="is-half-day" className="text-sm font-medium">
+                    Half Day Leave
+                  </Label>
+                </div>
+                {leaveForm.is_half_day && (
+                  <div>
+                    <Label htmlFor="half-day-period">Half Day Period</Label>
+                    <Select
+                      value={leaveForm.half_day_period}
+                      onValueChange={(value) => setLeaveForm({ ...leaveForm, half_day_period: value })}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="morning">Morning</SelectItem>
+                        <SelectItem value="afternoon">Afternoon</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
               <div>
                 <Label htmlFor="reason">Reason</Label>
                 <Textarea
