@@ -378,25 +378,6 @@ const EmployeesPage = () => {
                   className="mt-1"
                 />
               </div>
-              <div>
-                <Label htmlFor="edit-emp-manager">Manager</Label>
-                <Select
-                  value={selectedEmployee.manager_email || 'none'}
-                  onValueChange={(value) => setSelectedEmployee({ ...selectedEmployee, manager_email: value })}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select manager (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Manager</SelectItem>
-                    {managers.map(manager => (
-                      <SelectItem key={manager.email} value={manager.email}>
-                        {manager.full_name} ({manager.role})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="flex gap-3 pt-2">
                 <Button
                   type="button"
