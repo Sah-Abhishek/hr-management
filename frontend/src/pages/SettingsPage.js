@@ -20,6 +20,10 @@ const SettingsPage = () => {
   const [savingEmployeeId, setSavingEmployeeId] = useState(false);
 
   useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
     // Load from localStorage
     const savedDepts = localStorage.getItem('departments');
     const savedDesigs = localStorage.getItem('designations');
@@ -52,7 +56,16 @@ const SettingsPage = () => {
       'Paid Leave',
       'Unpaid Leave'
     ]);
-  }, []);
+
+    // Load employee ID settings from backend
+    try {
+      const response = await api.get('/employee-id-settings');
+      setEmployeeIdPrefix(response.data.prefix || 'EMP');
+      setEmployeeIdCounter(response.data.counter || 1000);
+    } catch (error) {
+      console.error('Failed to load employee ID settings:', error);
+    }
+  };
 
   const saveDepartments = (depts) => {
     localStorage.setItem('departments', JSON.stringify(depts));
