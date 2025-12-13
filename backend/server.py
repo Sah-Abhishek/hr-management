@@ -881,6 +881,207 @@ async def get_comp_off_records(
     records = await db.comp_off_records.find({}, {"_id": 0}).to_list(1000)
     return records
 
+# ============= NOTIFICATION SYSTEM =============
+
+class NotificationSettings(BaseModel):
+    email_enabled: bool = False
+    whatsapp_enabled: bool = False
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = 587
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None
+    from_email: Optional[str] = None
+    from_name: Optional[str] = "HRMS System"
+    twilio_account_sid: Optional[str] = None
+    twilio_auth_token: Optional[str] = None
+    twilio_phone_number: Optional[str] = None
+
+@api_router.post("/notification-settings")
+async def save_notification_settings(
+    settings: NotificationSettings,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Save notification settings to database"""
+    try:
+        settings_dict = settings.model_dump()
+        settings_dict["updated_at"] = datetime.now(timezone.utc)
+        settings_dict["updated_by"] = current_user.email
+        
+        # Upsert settings
+        await db.notification_settings.delete_many({})
+        await db.notification_settings.insert_one(settings_dict)
+        
+        return {"status": "success", "message": "Notification settings saved"}
+    except Exception as e:
+        logger.error(f"Failed to save notification settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/notification-settings")
+async def get_notification_settings(
+    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
+):
+    """Get current notification settings"""
+    settings = await db.notification_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return NotificationSettings().model_dump()
+    return settings
+
+async def send_email_notification(to_email: str, subject: str, html_content: str):
+    """Send email using Resend API"""
+    try:
+        # Get settings from database
+        settings = await db.notification_settings.find_one({}, {"_id": 0})
+        if not settings or not settings.get("email_enabled"):
+            logger.info("Email notifications disabled")
+            return False
+        
+        # Use Resend if using Resend API key
+        if settings.get("from_email", "").endswith("@resend.dev") or os.environ.get("RESEND_API_KEY"):
+            resend.api_key = os.environ.get("RESEND_API_KEY") or settings.get("smtp_password")
+            params = {
+                "from": settings.get("from_email", "onboarding@resend.dev"),
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content
+            }
+            email = await asyncio.to_thread(resend.Emails.send, params)
+            logger.info(f"Email sent to {to_email} via Resend: {email.get('id')}")
+            return True
+        else:
+            # Use SMTP for other providers
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = f"{settings.get('from_name')} <{settings.get('from_email')}>"
+            msg['To'] = to_email
+            
+            html_part = MIMEText(html_content, 'html')
+            msg.attach(html_part)
+            
+            def send_smtp():
+                with smtplib.SMTP(settings.get('smtp_host'), settings.get('smtp_port', 587)) as server:
+                    server.starttls()
+                    server.login(settings.get('smtp_username'), settings.get('smtp_password'))
+                    server.send_message(msg)
+            
+            await asyncio.to_thread(send_smtp)
+            logger.info(f"Email sent to {to_email} via SMTP")
+            return True
+            
+    except Exception as e:
+        logger.error(f"Failed to send email to {to_email}: {str(e)}")
+        return False
+
+async def send_whatsapp_notification(to_phone: str, message: str):
+    """Send WhatsApp message using Twilio"""
+    try:
+        # Get settings from database
+        settings = await db.notification_settings.find_one({}, {"_id": 0})
+        if not settings or not settings.get("whatsapp_enabled"):
+            logger.info("WhatsApp notifications disabled")
+            return False
+        
+        twilio_sid = settings.get("twilio_account_sid")
+        twilio_token = settings.get("twilio_auth_token")
+        twilio_number = settings.get("twilio_phone_number")
+        
+        if not all([twilio_sid, twilio_token, twilio_number]):
+            logger.warning("Twilio credentials not configured")
+            return False
+        
+        def send_twilio():
+            client = Client(twilio_sid, twilio_token)
+            message_obj = client.messages.create(
+                body=message,
+                from_=f"whatsapp:{twilio_number}",
+                to=f"whatsapp:{to_phone}"
+            )
+            return message_obj.sid
+        
+        message_sid = await asyncio.to_thread(send_twilio)
+        logger.info(f"WhatsApp sent to {to_phone}: {message_sid}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to send WhatsApp to {to_phone}: {str(e)}")
+        return False
+
+def generate_leave_application_email(employee_name: str, leave_type: str, start_date: str, end_date: str, reason: str):
+    """Generate HTML email for leave application"""
+    return f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <h2 style="color: #1e293b; border-bottom: 3px solid #10b981; padding-bottom: 10px;">Leave Application Submitted</h2>
+            <p>Hello,</p>
+            <p><strong>{employee_name}</strong> has applied for leave with the following details:</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr style="background-color: #f8fafc;">
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>Leave Type:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;">{leave_type}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>Start Date:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;">{start_date}</td>
+                </tr>
+                <tr style="background-color: #f8fafc;">
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>End Date:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;">{end_date}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>Reason:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;">{reason}</td>
+                </tr>
+            </table>
+            <p style="margin-top: 20px; padding: 15px; background-color: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 4px;">
+                Please review and approve/reject this leave application at your earliest convenience.
+            </p>
+            <p style="color: #64748b; font-size: 12px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                This is an automated notification from HRMS Leave Management System.
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+
+def generate_leave_approval_email(employee_name: str, leave_type: str, start_date: str, end_date: str, status: str):
+    """Generate HTML email for leave approval/rejection"""
+    is_approved = status.lower() == "approved"
+    status_color = "#10b981" if is_approved else "#ef4444"
+    status_text = "Approved" if is_approved else "Rejected"
+    
+    return f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <h2 style="color: {status_color}; border-bottom: 3px solid {status_color}; padding-bottom: 10px;">Leave {status_text}</h2>
+            <p>Hello <strong>{employee_name}</strong>,</p>
+            <p>Your leave application has been <strong style="color: {status_color};">{status_text.upper()}</strong>.</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr style="background-color: #f8fafc;">
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>Leave Type:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;">{leave_type}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>Start Date:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;">{start_date}</td>
+                </tr>
+                <tr style="background-color: #f8fafc;">
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>End Date:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;">{end_date}</td>
+                </tr>
+            </table>
+            <p style="color: #64748b; font-size: 12px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                This is an automated notification from HRMS Leave Management System.
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+
 # Include router
 app.include_router(api_router)
 
