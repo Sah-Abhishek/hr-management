@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Users, FileText, CheckSquare, User, LogOut, Menu, X, Settings, Bell, Network, ClipboardList, Wallet, Gift } from 'lucide-react';
+import { Home, Users, FileText, CheckSquare, User, LogOut, Menu, X, Settings, Bell, Network, ClipboardList, Wallet, Gift, Building2 } from 'lucide-react';
 import { clearAuth, getAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
@@ -39,6 +39,7 @@ const Layout = () => {
     { name: 'Comp-Off', href: '/comp-off', icon: Gift, roles: ['admin', 'manager'] },
     { name: 'Approvals', href: '/approvals', icon: CheckSquare, roles: ['admin', 'manager'] },
     { name: 'Leave Policy', href: '/leave-policy', icon: FileText, roles: ['admin'] },
+    { name: 'Organizations', href: '/organizations', icon: Building2, roles: ['admin'] },
     { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
     { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['admin'] },
     { name: 'Profile', href: '/profile', icon: User, roles: ['admin', 'manager', 'employee'] },
