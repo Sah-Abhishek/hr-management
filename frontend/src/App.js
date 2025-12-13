@@ -19,6 +19,7 @@ import AllLeavesPage from '@/pages/AllLeavesPage';
 import LeaveBalancePage from '@/pages/LeaveBalancePage';
 import CompOffPage from '@/pages/CompOffPage';
 import OrganizationsPage from '@/pages/OrganizationsPage';
+import ReportsPage from '@/pages/ReportsPage';
 import Layout from '@/components/Layout';
 
 const ProtectedRoute = ({ children }) => {
@@ -53,6 +54,7 @@ function App() {
             <Route path="settings" element={<SettingsPage />} />
             <Route path="notifications" element={<NotificationSettingsPage />} />
             <Route path="organizations" element={<OrganizationsPage />} />
+            <Route path="reports" element={<ReportsPage />} />
             <Route path="hierarchy" element={<HierarchyPage />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
