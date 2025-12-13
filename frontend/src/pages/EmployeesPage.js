@@ -138,10 +138,11 @@ const EmployeesPage = () => {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                 <div>
-                  <Label htmlFor="emp-name">Full Name</Label>
+                  <Label htmlFor="emp-name">Full Name *</Label>
                   <Input
                     id="emp-name"
                     data-testid="emp-name-input"
+                    placeholder="John Doe"
                     value={employeeForm.full_name}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, full_name: e.target.value })}
                     required
@@ -149,11 +150,12 @@ const EmployeesPage = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="emp-email">Email</Label>
+                  <Label htmlFor="emp-email">Email *</Label>
                   <Input
                     id="emp-email"
                     data-testid="emp-email-input"
                     type="email"
+                    placeholder="john.doe@company.com"
                     value={employeeForm.email}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
                     required
@@ -161,80 +163,71 @@ const EmployeesPage = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="emp-password">Password</Label>
+                  <Label htmlFor="emp-phone">Phone Number *</Label>
+                  <Input
+                    id="emp-phone"
+                    data-testid="emp-phone-input"
+                    type="tel"
+                    placeholder="+1234567890"
+                    value={employeeForm.phone}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })}
+                    required
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="emp-department">Department *</Label>
+                  <Select
+                    value={employeeForm.department}
+                    onValueChange={(value) => setEmployeeForm({ ...employeeForm, department: value })}
+                  >
+                    <SelectTrigger data-testid="emp-department-select" className="mt-1">
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map(dept => (
+                        <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {departments.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-1">Go to Settings to add departments</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="emp-manager">Manager</Label>
+                  <Select
+                    value={employeeForm.manager_email}
+                    onValueChange={(value) => setEmployeeForm({ ...employeeForm, manager_email: value })}
+                  >
+                    <SelectTrigger data-testid="emp-manager-select" className="mt-1">
+                      <SelectValue placeholder="Select manager (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Manager</SelectItem>
+                      {managers.map(manager => (
+                        <SelectItem key={manager.email} value={manager.email}>
+                          {manager.full_name} ({manager.role})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="emp-password">Temporary Password *</Label>
                   <Input
                     id="emp-password"
                     data-testid="emp-password-input"
                     type="password"
+                    placeholder="Employee will use this to login"
                     value={employeeForm.password}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, password: e.target.value })}
                     required
                     className="mt-1"
                   />
+                  <p className="text-xs text-slate-500 mt-1">Employee can change this after first login</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="emp-department">Department</Label>
-                    <Input
-                      id="emp-department"
-                      data-testid="emp-department-input"
-                      value={employeeForm.department}
-                      onChange={(e) => setEmployeeForm({ ...employeeForm, department: e.target.value })}
-                      required
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="emp-designation">Designation</Label>
-                    <Input
-                      id="emp-designation"
-                      data-testid="emp-designation-input"
-                      value={employeeForm.designation}
-                      onChange={(e) => setEmployeeForm({ ...employeeForm, designation: e.target.value })}
-                      required
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="emp-role">Role</Label>
-                  <Select
-                    value={employeeForm.role}
-                    onValueChange={(value) => setEmployeeForm({ ...employeeForm, role: value })}
-                  >
-                    <SelectTrigger data-testid="emp-role-select" className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="employee">Employee</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="emp-phone">Phone (Optional)</Label>
-                  <Input
-                    id="emp-phone"
-                    data-testid="emp-phone-input"
-                    type="tel"
-                    value={employeeForm.phone}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="emp-manager">Manager Email (Optional)</Label>
-                  <Input
-                    id="emp-manager"
-                    data-testid="emp-manager-input"
-                    type="email"
-                    value={employeeForm.manager_email}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, manager_email: e.target.value })}
-                    className="mt-1"
-                  />
-                </div>
-                <div className="flex gap-3">
+                <div className="flex gap-3 pt-2">
                   <Button
                     type="button"
                     variant="outline"
