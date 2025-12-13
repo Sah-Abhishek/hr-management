@@ -531,7 +531,7 @@ const EmployeesPage = () => {
         ))}
       </div>
 
-      {employees.length === 0 && (
+      {filteredEmployees.length === 0 && (
         <Card className="border-slate-100 shadow-sm">
           <CardContent className="py-12">
             <div className="text-center text-slate-500">
