@@ -261,25 +261,6 @@ const EmployeesPage = () => {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="emp-manager">Manager</Label>
-                  <Select
-                    value={employeeForm.manager_email}
-                    onValueChange={(value) => setEmployeeForm({ ...employeeForm, manager_email: value })}
-                  >
-                    <SelectTrigger data-testid="emp-manager-select" className="mt-1">
-                      <SelectValue placeholder="Select manager (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Manager</SelectItem>
-                      {managers.map(manager => (
-                        <SelectItem key={manager.email} value={manager.email}>
-                          {manager.full_name} ({manager.role})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
                   <Label htmlFor="emp-password">Temporary Password *</Label>
                   <Input
                     id="emp-password"
