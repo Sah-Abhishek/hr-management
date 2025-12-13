@@ -77,15 +77,25 @@ const LoginPage = () => {
       let errorMessage = 'Registration failed';
       
       if (error.response?.data?.detail) {
-        // Handle array of validation errors
-        if (Array.isArray(error.response.data.detail)) {
-          errorMessage = error.response.data.detail.map(err => err.msg || err).join(', ');
-        } else if (typeof error.response.data.detail === 'string') {
-          errorMessage = error.response.data.detail;
+        const detail = error.response.data.detail;
+        // Handle array of validation errors (FastAPI format)
+        if (Array.isArray(detail)) {
+          const errors = detail.map(err => {
+            if (typeof err === 'object' && err.msg) {
+              return `${err.loc ? err.loc[err.loc.length - 1] : 'Field'}: ${err.msg}`;
+            }
+            return String(err);
+          });
+          errorMessage = errors.join('; ');
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        } else if (typeof detail === 'object') {
+          errorMessage = JSON.stringify(detail);
         }
       }
       
       toast.error(errorMessage);
+      console.error('Registration error:', error.response?.data);
     } finally {
       setLoading(false);
     }
