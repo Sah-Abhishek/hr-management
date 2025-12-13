@@ -90,55 +90,44 @@ const LeavePolicyPage = () => {
         <CardContent>
           <form onSubmit={handleSave} className="space-y-6">
             <div className="space-y-4">
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                <Label htmlFor="sick-leave" className="text-blue-900 font-medium">Sick Leave (days/year)</Label>
-                <Input
-                  id="sick-leave"
-                  data-testid="sick-leave-input"
-                  type="number"
-                  min="0"
-                  value={policy.sick_leave}
-                  onChange={(e) => setPolicy({ ...policy, sick_leave: parseInt(e.target.value) || 0 })}
-                  className="mt-2 bg-white"
-                />
-                <p className="text-xs text-blue-600 mt-1">For medical emergencies and illness</p>
-              </div>
-
-              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                <Label htmlFor="casual-leave" className="text-emerald-900 font-medium">Casual Leave (days/year)</Label>
-                <Input
-                  id="casual-leave"
-                  data-testid="casual-leave-input"
-                  type="number"
-                  min="0"
-                  value={policy.casual_leave}
-                  onChange={(e) => setPolicy({ ...policy, casual_leave: parseInt(e.target.value) || 0 })}
-                  className="mt-2 bg-white"
-                />
-                <p className="text-xs text-emerald-600 mt-1">For personal matters and short breaks</p>
-              </div>
-
-              <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
-                <Label htmlFor="paid-leave" className="text-purple-900 font-medium">Paid Leave / Vacation (days/year)</Label>
-                <Input
-                  id="paid-leave"
-                  data-testid="paid-leave-input"
-                  type="number"
-                  min="0"
-                  value={policy.paid_leave}
-                  onChange={(e) => setPolicy({ ...policy, paid_leave: parseInt(e.target.value) || 0 })}
-                  className="mt-2 bg-white"
-                />
-                <p className="text-xs text-purple-600 mt-1">For vacations and planned time off</p>
-              </div>
-
-              <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <Label className="text-slate-900 font-medium">Unpaid Leave</Label>
-                <div className="mt-2 p-3 bg-white rounded border border-slate-200">
-                  <p className="text-sm text-slate-600">Unlimited - No quota</p>
+              {leaveTypes.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <p>No leave types configured.</p>
+                  <p className="text-sm mt-2">Go to Settings to add leave types first.</p>
                 </div>
-                <p className="text-xs text-slate-600 mt-1">Available without pay deduction from salary</p>
-              </div>
+              ) : (
+                leaveTypes.map((leaveType, index) => {
+                  const colors = [
+                    'bg-blue-50 border-blue-100 text-blue-900',
+                    'bg-emerald-50 border-emerald-100 text-emerald-900',
+                    'bg-purple-50 border-purple-100 text-purple-900',
+                    'bg-amber-50 border-amber-100 text-amber-900',
+                    'bg-pink-50 border-pink-100 text-pink-900',
+                    'bg-indigo-50 border-indigo-100 text-indigo-900',
+                  ];
+                  const colorClass = colors[index % colors.length];
+                  
+                  return (
+                    <div key={leaveType} className={`p-4 rounded-lg border ${colorClass}`}>
+                      <Label htmlFor={`leave-${leaveType}`} className="font-medium">
+                        {leaveType} (days/year)
+                      </Label>
+                      <Input
+                        id={`leave-${leaveType}`}
+                        data-testid={`${leaveType.toLowerCase().replace(/ /g, '-')}-input`}
+                        type="number"
+                        min="0"
+                        value={getQuota(leaveType)}
+                        onChange={(e) => updateQuota(leaveType, e.target.value)}
+                        className="mt-2 bg-white"
+                      />
+                      <p className="text-xs mt-1 opacity-70">
+                        {getQuota(leaveType) === 0 ? 'Unlimited - Set 0 for unlimited' : `${getQuota(leaveType)} days per year`}
+                      </p>
+                    </div>
+                  );
+                })
+              )}
             </div>
 
             <div className="pt-4 border-t border-slate-200">
