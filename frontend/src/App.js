@@ -46,6 +46,7 @@ function App() {
             <Route path="leaves" element={<LeavesPage />} />
             <Route path="all-leaves" element={<AllLeavesPage />} />
             <Route path="leave-balance" element={<LeaveBalancePage />} />
+            <Route path="comp-off" element={<CompOffPage />} />
             <Route path="approvals" element={<ApprovalsPage />} />
             <Route path="leave-policy" element={<LeavePolicyPage />} />
             <Route path="settings" element={<SettingsPage />} />
