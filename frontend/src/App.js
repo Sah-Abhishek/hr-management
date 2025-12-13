@@ -12,6 +12,7 @@ import LeavesPage from '@/pages/LeavesPage';
 import ApprovalsPage from '@/pages/ApprovalsPage';
 import ProfilePage from '@/pages/ProfilePage';
 import LeavePolicyPage from '@/pages/LeavePolicyPage';
+import SettingsPage from '@/pages/SettingsPage';
 import Layout from '@/components/Layout';
 
 const ProtectedRoute = ({ children }) => {
