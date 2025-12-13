@@ -330,7 +330,7 @@ const EmployeesPage = () => {
               <User className="w-16 h-16 mx-auto mb-4 text-slate-300" />
               <p className="text-lg mb-2">No employees found</p>
               {user?.role === 'admin' && (
-                <p className="text-sm">Click "Add Employee" to create your first employee</p>
+                <p className="text-sm">Click &quot;Add Employee&quot; to create your first employee</p>
               )}
             </div>
           </CardContent>
