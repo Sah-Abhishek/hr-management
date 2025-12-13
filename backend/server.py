@@ -123,6 +123,7 @@ class Employee(BaseModel):
     department: str
     designation: str
     phone: Optional[str] = None
+    monthly_salary: Optional[float] = None
     organization_id: Optional[str] = None
     organization_name: Optional[str] = None
     joining_date: datetime
@@ -136,6 +137,7 @@ class EmployeeUpdate(BaseModel):
     department: Optional[str] = None
     designation: Optional[str] = None
     phone: Optional[str] = None
+    monthly_salary: Optional[float] = None
     organization_id: Optional[str] = None
     manager_email: Optional[str] = None
     employee_id: Optional[str] = None
