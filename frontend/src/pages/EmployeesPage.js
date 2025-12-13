@@ -18,6 +18,8 @@ const EmployeesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { user } = getAuth();
+  const [departments, setDepartments] = useState([]);
+  const [managers, setManagers] = useState([]);
 
   const [employeeForm, setEmployeeForm] = useState({
     email: '',
