@@ -71,7 +71,10 @@ const EmployeesPage = () => {
     setSubmitting(true);
 
     try {
-      await api.post('/employees', employeeForm);
+      await api.post('/employees', {
+        ...employeeForm,
+        designation: employeeForm.designation || 'Employee' // Default designation
+      });
       toast.success('Employee added successfully!');
       setDialogOpen(false);
       setEmployeeForm({
@@ -86,7 +89,18 @@ const EmployeesPage = () => {
       });
       fetchEmployees();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to add employee');
+      let errorMessage = 'Failed to add employee';
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map(err => 
+            typeof err === 'object' && err.msg ? err.msg : String(err)
+          ).join('; ');
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        }
+      }
+      toast.error(errorMessage);
     } finally {
       setSubmitting(false);
     }
