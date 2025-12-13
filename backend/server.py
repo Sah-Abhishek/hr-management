@@ -333,6 +333,42 @@ async def get_me(current_employee: Employee = Depends(get_current_employee)):
 
 # ============= EMPLOYEE ENDPOINTS =============
 
+async def get_employee_id_settings():
+    """Get employee ID prefix from settings"""
+    settings = await db.employee_id_settings.find_one({}, {"_id": 0})
+    if settings:
+        return settings.get('prefix', 'EMP'), settings.get('counter', 1000)
+    return 'EMP', 1000
+
+async def generate_employee_id():
+    """Generate unique employee ID with prefix"""
+    prefix, counter = await get_employee_id_settings()
+    
+    # Find the highest counter used
+    employees = await db.employees.find({}, {"_id": 0, "employee_id": 1}).to_list(10000)
+    max_counter = counter
+    
+    for emp in employees:
+        emp_id = emp.get('employee_id', '')
+        if emp_id.startswith(prefix):
+            try:
+                num = int(emp_id.replace(prefix, ''))
+                max_counter = max(max_counter, num)
+            except:
+                pass
+    
+    new_counter = max_counter + 1
+    return f"{prefix}{new_counter:04d}"
+
+async def validate_employee_id_unique(employee_id: str, exclude_id: str = None):
+    """Validate that employee ID is unique"""
+    query = {"employee_id": employee_id}
+    if exclude_id:
+        query["id"] = {"$ne": exclude_id}
+    
+    existing = await db.employees.find_one(query, {"_id": 0})
+    return existing is None
+
 @api_router.get("/employees", response_model=List[Employee])
 async def get_all_employees(
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
