@@ -123,7 +123,7 @@ class EmployeeUpdate(BaseModel):
     department: Optional[str] = None
     designation: Optional[str] = None
     phone: Optional[str] = None
-    manager_email: Optional[EmailStr] = None
+    manager_email: Optional[str] = None
     employee_id: Optional[str] = None
 
 # Leave Models
