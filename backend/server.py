@@ -113,7 +113,7 @@ class Employee(BaseModel):
     designation: str
     phone: Optional[str] = None
     joining_date: datetime
-    manager_email: Optional[EmailStr] = None
+    manager_email: Optional[str] = None
     manager_name: Optional[str] = None
     leave_balance: LeaveBalance
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
