@@ -109,6 +109,58 @@ const EmployeesPage = () => {
     }
   };
 
+  const handleEdit = (employee) => {
+    setSelectedEmployee(employee);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateEmployee = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    try {
+      await api.put(`/employees/${selectedEmployee.id}`, {
+        full_name: selectedEmployee.full_name,
+        department: selectedEmployee.department,
+        designation: selectedEmployee.designation,
+        phone: selectedEmployee.phone,
+        manager_email: selectedEmployee.manager_email === 'none' ? '' : selectedEmployee.manager_email,
+      });
+      toast.success('Employee updated successfully!');
+      setEditDialogOpen(false);
+      setSelectedEmployee(null);
+      fetchEmployees();
+    } catch (error) {
+      let errorMessage = 'Failed to update employee';
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map(err => 
+            typeof err === 'object' && err.msg ? err.msg : String(err)
+          ).join('; ');
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        }
+      }
+      toast.error(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Filter and search employees
+  const filteredEmployees = employees.filter(emp => {
+    const matchesSearch = searchTerm === '' || 
+      emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.designation.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDepartment = filterDepartment === '' || emp.department === filterDepartment;
+    const matchesRole = filterRole === '' || emp.role === filterRole;
+    
+    return matchesSearch && matchesDepartment && matchesRole;
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
