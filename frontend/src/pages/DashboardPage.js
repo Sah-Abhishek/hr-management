@@ -61,7 +61,7 @@ const DashboardPage = () => {
         <h1 className="text-4xl font-bold text-slate-900 mb-2" style={{ fontFamily: 'Plus Jakarta Sans' }}>
           Dashboard
         </h1>
-        <p className="text-lg text-slate-600">Welcome back! Here's your overview</p>
+        <p className="text-lg text-slate-600">Welcome back! Here&apos;s your overview</p>
       </div>
 
       {/* Stats Grid */}
