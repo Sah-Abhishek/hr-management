@@ -355,6 +355,68 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Employee ID Settings */}
+      <Card className="border-slate-100 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-2xl font-semibold text-slate-900" style={{ fontFamily: 'Plus Jakarta Sans' }}>
+            <Hash className="w-6 h-6" />
+            Employee ID Configuration
+          </CardTitle>
+          <p className="text-sm text-slate-600 mt-2">
+            Configure how employee IDs are generated. New employees will automatically get IDs like: <strong>{employeeIdPrefix}{String(employeeIdCounter).padStart(4, '0')}</strong>
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="employee-id-prefix">ID Prefix *</Label>
+              <Input
+                id="employee-id-prefix"
+                placeholder="EMP"
+                value={employeeIdPrefix}
+                onChange={(e) => setEmployeeIdPrefix(e.target.value.toUpperCase())}
+                maxLength={10}
+                className="mt-1"
+              />
+              <p className="text-xs text-slate-500 mt-1">Uppercase letters only (e.g., EMP, COMP, ORG)</p>
+            </div>
+            
+            <div>
+              <Label htmlFor="employee-id-counter">Starting Counter *</Label>
+              <Input
+                id="employee-id-counter"
+                type="number"
+                placeholder="1000"
+                value={employeeIdCounter}
+                onChange={(e) => setEmployeeIdCounter(e.target.value)}
+                min="1"
+                className="mt-1"
+              />
+              <p className="text-xs text-slate-500 mt-1">Next employee will start from this number</p>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+            <p className="text-sm text-blue-900">
+              <strong>Example IDs:</strong> {employeeIdPrefix}{String(employeeIdCounter).padStart(4, '0')}, {employeeIdPrefix}{String(parseInt(employeeIdCounter) + 1).padStart(4, '0')}, {employeeIdPrefix}{String(parseInt(employeeIdCounter) + 2).padStart(4, '0')}
+            </p>
+            <p className="text-xs text-blue-800 mt-2">
+              The system will auto-increment from the highest existing ID. Existing employees keep their current IDs.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <Button
+              onClick={saveEmployeeIdSettings}
+              disabled={savingEmployeeId}
+              className="w-full md:w-auto bg-slate-800 hover:bg-slate-900 rounded-full"
+            >
+              {savingEmployeeId ? 'Saving...' : 'Save Employee ID Settings'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
