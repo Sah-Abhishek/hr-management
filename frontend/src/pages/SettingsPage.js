@@ -43,10 +43,10 @@ const SettingsPage = () => {
     ]);
     
     setLeaveTypes(savedLeaveTypes ? JSON.parse(savedLeaveTypes) : [
-      { name: 'Sick Leave', quota: 12 },
-      { name: 'Casual Leave', quota: 12 },
-      { name: 'Paid Leave', quota: 15 },
-      { name: 'Unpaid Leave', quota: 0 }
+      'Sick Leave',
+      'Casual Leave',
+      'Paid Leave',
+      'Unpaid Leave'
     ]);
   }, []);
 
