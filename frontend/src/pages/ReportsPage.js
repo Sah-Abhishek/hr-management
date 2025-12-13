@@ -101,6 +101,12 @@ const ReportsPage = () => {
     try {
       const filteredLeaves = filterLeaves();
       
+      if (filteredLeaves.length === 0) {
+        toast.error('No data to export');
+        setGenerating(false);
+        return;
+      }
+      
       // Header
       doc.setFontSize(20);
       doc.setTextColor(30, 41, 59); // slate-900
