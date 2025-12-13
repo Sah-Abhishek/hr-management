@@ -142,6 +142,7 @@ const EmployeesPage = () => {
         department: selectedEmployee.department,
         designation: selectedEmployee.designation,
         phone: selectedEmployee.phone,
+        monthly_salary: selectedEmployee.monthly_salary || null,
         organization_id: selectedEmployee.organization_id || null,
         manager_email: selectedEmployee.manager_email === 'none' ? '' : selectedEmployee.manager_email,
         employee_id: selectedEmployee.employee_id,
@@ -444,6 +445,18 @@ const EmployeesPage = () => {
                   required
                   className="mt-1"
                 />
+              </div>
+              <div>
+                <Label htmlFor="edit-emp-salary">Monthly Salary (₹)</Label>
+                <Input
+                  id="edit-emp-salary"
+                  type="number"
+                  placeholder="50000"
+                  value={selectedEmployee.monthly_salary || ''}
+                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, monthly_salary: parseFloat(e.target.value) || null })}
+                  className="mt-1"
+                />
+                <p className="text-xs text-slate-500 mt-1">Required for salary slip generation</p>
               </div>
               <div className="flex gap-3 pt-2">
                 <Button
