@@ -50,15 +50,24 @@ const LeavePolicyPage = () => {
     setSaving(true);
 
     try {
-      // For now, just show success. In production, this would save to backend
       await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success('Leave policy updated successfully!');
       localStorage.setItem('leave_policy', JSON.stringify(policy));
+      toast.success('Leave policy updated successfully!');
     } catch (error) {
       toast.error('Failed to update leave policy');
     } finally {
       setSaving(false);
     }
+  };
+
+  const updateQuota = (leaveType, value) => {
+    const key = leaveType.toLowerCase().replace(/ /g, '_');
+    setPolicy({ ...policy, [key]: parseInt(value) || 0 });
+  };
+
+  const getQuota = (leaveType) => {
+    const key = leaveType.toLowerCase().replace(/ /g, '_');
+    return policy[key] || 0;
   };
 
   return (
