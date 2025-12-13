@@ -354,7 +354,7 @@ async def generate_employee_id():
             try:
                 num = int(emp_id.replace(prefix, ''))
                 max_counter = max(max_counter, num)
-            except:
+            except ValueError:
                 pass
     
     new_counter = max_counter + 1
