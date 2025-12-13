@@ -34,7 +34,20 @@ const EmployeesPage = () => {
 
   useEffect(() => {
     fetchEmployees();
+    loadDepartments();
   }, []);
+
+  const loadDepartments = () => {
+    const savedDepts = localStorage.getItem('departments');
+    setDepartments(savedDepts ? JSON.parse(savedDepts) : [
+      'Engineering',
+      'Human Resources',
+      'Sales',
+      'Marketing',
+      'Finance',
+      'Operations'
+    ]);
+  };
 
   const fetchEmployees = async () => {
     try {
