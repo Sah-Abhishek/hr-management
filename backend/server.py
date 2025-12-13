@@ -481,6 +481,15 @@ async def update_employee(
     # Prepare update data
     update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
     
+    # Validate employee_id uniqueness if being updated
+    if 'employee_id' in update_dict and update_dict['employee_id']:
+        if current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Only admins can update employee ID")
+        
+        is_unique = await validate_employee_id_unique(update_dict['employee_id'], exclude_id=employee_id)
+        if not is_unique:
+            raise HTTPException(status_code=400, detail="Employee ID already exists. Please choose a unique ID.")
+    
     # Get manager name if manager_email is being updated
     if 'manager_email' in update_dict and update_dict['manager_email']:
         manager = await db.employees.find_one({"email": update_dict['manager_email']}, {"_id": 0})
