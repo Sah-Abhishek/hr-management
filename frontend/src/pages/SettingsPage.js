@@ -146,7 +146,7 @@ const SettingsPage = () => {
         <p className="text-lg text-slate-600">Manage departments and designations</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Departments */}
         <Card className="border-slate-100 shadow-sm">
           <CardHeader>
