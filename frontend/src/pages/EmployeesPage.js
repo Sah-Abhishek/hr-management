@@ -71,7 +71,8 @@ const EmployeesPage = () => {
     try {
       await api.post('/employees', {
         ...employeeForm,
-        designation: employeeForm.designation || 'Employee' // Default designation
+        role: 'employee', // Default role
+        designation: 'Employee' // Default designation
       });
       toast.success('Employee added successfully!');
       setDialogOpen(false);
