@@ -296,6 +296,43 @@ async def register(user_data: UserRegister):
     
     await db.employees.insert_one(emp_doc)
     
+    # Send welcome email to new employee and notification to admin
+    try:
+        # Send welcome email to employee
+        welcome_html = generate_welcome_email(
+            employee_name=user_data.full_name,
+            employee_id=employee_id,
+            email=user_data.email,
+            role=user_data.role,
+            department=user_data.department,
+            designation=user_data.designation
+        )
+        await send_email_notification(
+            to_email=user_data.email,
+            subject=f"Welcome to HRMS - {user_data.full_name}",
+            html_content=welcome_html
+        )
+        
+        # Notify admin about new employee
+        admin = await db.employees.find_one({"role": "admin"}, {"_id": 0})
+        if admin:
+            admin_notification_html = generate_new_employee_notification_email(
+                employee_name=user_data.full_name,
+                employee_id=employee_id,
+                email=user_data.email,
+                role=user_data.role,
+                department=user_data.department,
+                designation=user_data.designation,
+                admin_name=admin.get('full_name', 'Admin')
+            )
+            await send_email_notification(
+                to_email=admin.get('email'),
+                subject=f"New Employee Added - {user_data.full_name}",
+                html_content=admin_notification_html
+            )
+    except Exception as e:
+        logger.error(f"Failed to send welcome/notification email: {str(e)}")
+    
     # Create token
     access_token = create_access_token(data={"sub": user.email})
     
