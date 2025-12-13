@@ -1,0 +1,127 @@
+{
+  "design_system": {
+    "name": "Humanist Precision",
+    "description": "A soft, utility-focused aesthetic that blends Swiss precision with organic warmth. It prioritizes clarity, calm, and efficiency for HR tasks.",
+    "theme_strategy": "Light Mode Primary (Paper-like) with High-Contrast Data",
+    "typography": {
+      "font_family_heading": "Plus Jakarta Sans, sans-serif",
+      "font_family_body": "Public Sans, sans-serif",
+      "scale": {
+        "h1": "text-4xl font-bold tracking-tight text-slate-900",
+        "h2": "text-3xl font-semibold tracking-tight text-slate-900",
+        "h3": "text-2xl font-semibold text-slate-800",
+        "body_large": "text-lg leading-relaxed text-slate-700",
+        "body_base": "text-base leading-relaxed text-slate-600",
+        "caption": "text-sm font-medium text-slate-500 uppercase tracking-wider"
+      }
+    },
+    "colors": {
+      "palette": {
+        "primary": {
+          "base": "#475569",
+          "hover": "#334155",
+          "foreground": "#FFFFFF"
+        },
+        "accent": {
+          "base": "#0EA5E9",
+          "subtle": "#E0F2FE",
+          "foreground": "#FFFFFF"
+        },
+        "background": {
+          "page": "#F8FAFC",
+          "card": "#FFFFFF",
+          "subtle": "#F1F5F9"
+        },
+        "status": {
+          "success": "#10B981",
+          "success_bg": "#ECFDF5",
+          "warning": "#F59E0B",
+          "warning_bg": "#FFFBEB",
+          "error": "#EF4444",
+          "error_bg": "#FEF2F2"
+        },
+        "border": {
+          "default": "#E2E8F0",
+          "active": "#94A3B8"
+        }
+      }
+    },
+    "spacing": {
+      "container_padding": "p-6 md:p-10",
+      "section_gap": "gap-8",
+      "item_gap": "gap-4"
+    },
+    "visual_enhancers": {
+      "radius": "rounded-xl",
+      "shadows": {
+        "card": "shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300",
+        "dropdown": "shadow-xl border border-slate-100"
+      },
+      "glassmorphism": "backdrop-blur-md bg-white/80 border-b border-white/20",
+      "gradients": "None. Use solid colors and subtle background patterns (dots/grid) only."
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-slate-800 text-white hover:bg-slate-900 rounded-full px-6 py-2.5 font-medium transition-all active:scale-95 shadow-sm",
+      "secondary": "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-full px-6 py-2.5 font-medium transition-all",
+      "ghost": "text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-lg px-4 py-2"
+    },
+    "cards": {
+      "dashboard_widget": "bg-white rounded-xl border border-slate-100 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex flex-col justify-between h-full",
+      "stat_card": "bg-white rounded-xl border border-slate-100 p-6 flex items-center justify-between hover:border-slate-300 transition-colors"
+    },
+    "inputs": {
+      "default": "bg-slate-50 border-slate-200 text-slate-900 rounded-lg focus:ring-2 focus:ring-slate-200 focus:border-slate-400 transition-all placeholder:text-slate-400"
+    },
+    "badges": {
+      "pending": "bg-amber-50 text-amber-700 border border-amber-100 px-2.5 py-0.5 rounded-full text-xs font-semibold",
+      "approved": "bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-0.5 rounded-full text-xs font-semibold",
+      "rejected": "bg-red-50 text-red-700 border border-red-100 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+    }
+  },
+  "layout_strategies": {
+    "dashboard_grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6",
+    "bento_grid": "grid grid-cols-1 md:grid-cols-4 gap-6 auto-rows-[minmax(180px,auto)]",
+    "detail_view": "Use Shadcn Sheet (Side Panel) for drilling down into Employee Details or Leave Requests. Do not navigate away from the dashboard."
+  },
+  "image_assets": {
+    "login_hero": {
+      "url": "https://images.unsplash.com/photo-1733471754436-a7b293256c43?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwyfHxtaW5pbWFsaXN0JTIwYWJzdHJhY3QlMjBvZmZpY2UlMjBhcmNoaXRlY3R1cmUlMjBicmlnaHR8ZW58MHx8fHwxNzY1NjU3NjY2fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Minimalist bright office abstract",
+      "usage": "Right side of the split-screen login page. Cover mode."
+    },
+    "avatars": [
+      {
+        "url": "https://images.unsplash.com/photo-1599132880549-bffe2907f808?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHwzfHxkaXZlcnNlJTIwcHJvZmVzc2lvbmFsJTIwaGVhZHNob3RzJTIwd2hpdGUlMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc2NTY1NzY2NXww&ixlib=rb-4.1.0&q=85",
+        "role": "Admin User"
+      },
+      {
+        "url": "https://images.pexels.com/photos/7202777/pexels-photo-7202777.jpeg",
+        "role": "Manager User"
+      },
+      {
+        "url": "https://images.pexels.com/photos/8485840/pexels-photo-8485840.jpeg",
+        "role": "Employee User"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "1. INSTALL FONTS: Add '@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Public+Sans:wght@400;500;600&display=swap');' to index.css",
+    "2. TAILWIND CONFIG: Update tailwind.config.js to use the font families defined above.",
+    "3. SHADCN CUSTOMIZATION: Override default Shadcn radius to 0.75rem (rounded-xl) and use the slate color palette defined in 'colors'.",
+    "4. LAYOUT: Implement the 'Bento Grid' for the dashboard. Use 'col-span-2' for main charts and 'col-span-1' for stats.",
+    "5. INTERACTION: Use 'Sonner' for all success/error toasts. Do not use standard alerts.",
+    "6. DATA-TESTID: Ensure every button, input, and card has a unique data-testid attribute (e.g., 'login-submit-btn', 'leave-balance-card').",
+    "7. NAVIGATION: Create a Sidebar navigation for Desktop and a Bottom Tab bar for Mobile.",
+    "8. AUTH FLOW: Login page must be split screen (Form Left, Image Right).",
+    "9. LEAVE REQUEST: Use a Shadcn Dialog or Sheet for the 'Apply Leave' form to keep context."
+  ],
+  "universal_guidelines": [
+    "Avoid gradients for backgrounds. Use solid colors or subtle noise.",
+    "Use 2x more padding than you think is necessary.",
+    "Never center text in cards unless it is a single big number.",
+    "Use 'text-slate-500' for labels and 'text-slate-900' for values.",
+    "All interactive elements must have a hover state that changes background or border color."
+  ]
+}
