@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta
 
 class HRMSAPITester:
-    def __init__(self, base_url="https://eduhris-lms.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://leavehub-8.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.admin_token = None
         self.manager_token = None
