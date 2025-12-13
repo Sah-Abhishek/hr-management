@@ -131,21 +131,25 @@ const LeavePolicyPage = () => {
             </div>
 
             <div className="pt-4 border-t border-slate-200">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-amber-800">
-                  <strong>Note:</strong> These quotas will apply to all new employees. Existing employee balances won't be affected automatically.
-                </p>
-              </div>
+              {leaveTypes.length > 0 && (
+                <>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-amber-800">
+                      <strong>Note:</strong> These quotas will apply to all new employees. Existing employee balances won't be affected automatically.
+                    </p>
+                  </div>
 
-              <Button
-                type="submit"
-                data-testid="save-policy-btn"
-                className="w-full bg-slate-800 hover:bg-slate-900 rounded-full"
-                disabled={saving}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Saving...' : 'Save Leave Policy'}
-              </Button>
+                  <Button
+                    type="submit"
+                    data-testid="save-policy-btn"
+                    className="w-full bg-slate-800 hover:bg-slate-900 rounded-full"
+                    disabled={saving}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {saving ? 'Saving...' : 'Save Leave Policy'}
+                  </Button>
+                </>
+              )}
             </div>
           </form>
         </CardContent>
