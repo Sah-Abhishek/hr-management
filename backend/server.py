@@ -498,6 +498,25 @@ async def create_employee(
     
     await db.employees.insert_one(emp_doc)
     
+    # Send welcome email to new employee
+    try:
+        welcome_html = generate_welcome_email(
+            employee_name=employee_data.full_name,
+            employee_id=employee_id,
+            email=employee_data.email,
+            role=employee_data.role,
+            department=employee_data.department,
+            designation=employee_data.designation
+        )
+        await send_email_notification(
+            to_email=employee_data.email,
+            subject=f"Welcome to HRMS - {employee_data.full_name}",
+            html_content=welcome_html
+        )
+        logger.info(f"Welcome email sent to new employee: {employee_data.email}")
+    except Exception as e:
+        logger.error(f"Failed to send welcome email: {str(e)}")
+    
     return employee
 
 @api_router.put("/employees/{employee_id}", response_model=Employee)
