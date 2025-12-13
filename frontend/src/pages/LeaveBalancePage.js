@@ -19,6 +19,7 @@ const LeaveBalancePage = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [leaveTypes, setLeaveTypes] = useState([]);
+  const [compOffRecords, setCompOffRecords] = useState([]);
 
   const [adjustForm, setAdjustForm] = useState({
     leave_type: '',
