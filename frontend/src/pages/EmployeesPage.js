@@ -80,9 +80,7 @@ const EmployeesPage = () => {
         email: '',
         password: '',
         full_name: '',
-        role: 'employee',
         department: '',
-        designation: '',
         phone: '',
         manager_email: '',
       });
