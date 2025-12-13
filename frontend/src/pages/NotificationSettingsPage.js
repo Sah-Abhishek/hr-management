@@ -29,16 +29,39 @@ const NotificationSettingsPage = () => {
   });
 
   useEffect(() => {
-    // Load saved settings
-    const savedEmailEnabled = localStorage.getItem('email_notifications_enabled');
-    const savedWhatsappEnabled = localStorage.getItem('whatsapp_notifications_enabled');
-    const savedEmailConfig = localStorage.getItem('email_config');
-    const savedWhatsappConfig = localStorage.getItem('whatsapp_config');
-
-    if (savedEmailEnabled) setEmailEnabled(savedEmailEnabled === 'true');
-    if (savedWhatsappEnabled) setWhatsappEnabled(savedWhatsappEnabled === 'true');
-    if (savedEmailConfig) setEmailConfig(JSON.parse(savedEmailConfig));
-    if (savedWhatsappConfig) setWhatsappConfig(JSON.parse(savedWhatsappConfig));
+    // Load settings from backend
+    const loadSettings = async () => {
+      try {
+        const response = await api.get('/notification-settings');
+        const settings = response.data;
+        
+        setEmailEnabled(settings.email_enabled || false);
+        setWhatsappEnabled(settings.whatsapp_enabled || false);
+        
+        if (settings.smtp_host) {
+          setEmailConfig({
+            smtp_host: settings.smtp_host || '',
+            smtp_port: String(settings.smtp_port || 587),
+            smtp_username: settings.smtp_username || '',
+            smtp_password: settings.smtp_password || '',
+            from_email: settings.from_email || '',
+            from_name: settings.from_name || 'HRMS System',
+          });
+        }
+        
+        if (settings.twilio_account_sid) {
+          setWhatsappConfig({
+            api_key: settings.twilio_account_sid || '',
+            phone_number_id: settings.twilio_phone_number || '',
+            business_account_id: settings.business_account_id || '',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load notification settings:', error);
+      }
+    };
+    
+    loadSettings();
   }, []);
 
   const handleSaveEmail = async (e) => {
