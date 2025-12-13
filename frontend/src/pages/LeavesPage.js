@@ -149,10 +149,11 @@ const LeavesPage = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Sick Leave">Sick Leave</SelectItem>
-                    <SelectItem value="Casual Leave">Casual Leave</SelectItem>
-                    <SelectItem value="Paid Leave">Paid Leave</SelectItem>
-                    <SelectItem value="Unpaid Leave">Unpaid Leave</SelectItem>
+                    {leaveTypes.map(type => (
+                      <SelectItem key={type.name} value={type.name}>
+                        {type.name} {type.quota > 0 && `(${type.quota} days/year)`}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
