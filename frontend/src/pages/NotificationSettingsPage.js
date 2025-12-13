@@ -200,7 +200,7 @@ const NotificationSettingsPage = () => {
                       disabled={!emailEnabled}
                       className="mt-1"
                     />
-                    <p className="text-xs text-slate-500 mt-1">e.g., smtp.gmail.com, smtp.office365.com</p>
+                    <p className="text-xs text-slate-500 mt-1">Gmail: smtp.gmail.com | Mailjet: in-v3.mailjet.com | Office365: smtp.office365.com</p>
                   </div>
                   <div>
                     <Label htmlFor="smtp-port">SMTP Port *</Label>
@@ -217,20 +217,21 @@ const NotificationSettingsPage = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="smtp-username">SMTP Username / Email *</Label>
+                  <Label htmlFor="smtp-username">SMTP Username / API Key *</Label>
                   <Input
                     id="smtp-username"
-                    type="email"
-                    placeholder="your-email@gmail.com"
+                    type="text"
+                    placeholder="your-email@gmail.com or API key"
                     value={emailConfig.smtp_username}
                     onChange={(e) => setEmailConfig({ ...emailConfig, smtp_username: e.target.value })}
                     disabled={!emailEnabled}
                     className="mt-1"
                   />
+                  <p className="text-xs text-slate-500 mt-1">For Mailjet: Use API Key here</p>
                 </div>
 
                 <div>
-                  <Label htmlFor="smtp-password">SMTP Password / App Password *</Label>
+                  <Label htmlFor="smtp-password">SMTP Password / Secret Key *</Label>
                   <Input
                     id="smtp-password"
                     type="password"
@@ -240,7 +241,7 @@ const NotificationSettingsPage = () => {
                     disabled={!emailEnabled}
                     className="mt-1"
                   />
-                  <p className="text-xs text-slate-500 mt-1">For Gmail, use App Password instead of regular password</p>
+                  <p className="text-xs text-slate-500 mt-1">Gmail: App Password | Mailjet: Secret Key</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
