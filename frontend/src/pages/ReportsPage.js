@@ -8,8 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { format } from 'date-fns';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import Papa from 'papaparse';
 
 const ReportsPage = () => {
   const [employees, setEmployees] = useState([]);
@@ -96,11 +95,10 @@ const ReportsPage = () => {
     return filtered;
   };
 
-  const generatePDF = () => {
+  const exportToCSV = () => {
     setGenerating(true);
     
     try {
-      const doc = new jsPDF();
       const filteredLeaves = filterLeaves();
       
       // Header
