@@ -10,8 +10,10 @@ import { toast } from 'sonner';
 const SettingsPage = () => {
   const [departments, setDepartments] = useState([]);
   const [designations, setDesignations] = useState([]);
+  const [leaveTypes, setLeaveTypes] = useState([]);
   const [newDepartment, setNewDepartment] = useState('');
   const [newDesignation, setNewDesignation] = useState('');
+  const [newLeaveType, setNewLeaveType] = useState({ name: '', quota: '' });
 
   useEffect(() => {
     // Load from localStorage
