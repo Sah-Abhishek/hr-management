@@ -302,7 +302,7 @@ const SettingsPage = () => {
 
             <div className="pt-4 border-t border-slate-200">
               <p className="text-xs text-slate-600">
-                <strong>Note:</strong> Leave types will be used across the system for leave applications and balance management.
+                <strong>Note:</strong> After adding leave types here, go to <strong>Leave Policy</strong> page to set annual quotas.
               </p>
             </div>
           </CardContent>
