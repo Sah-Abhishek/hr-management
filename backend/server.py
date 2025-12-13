@@ -442,6 +442,37 @@ async def update_employee(
     
     return Employee(**updated_employee)
 
+class RoleUpdate(BaseModel):
+    role: str
+
+@api_router.put("/employees/{employee_id}/role")
+async def update_employee_role(
+    employee_id: str,
+    role_data: RoleUpdate,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    # Check if employee exists
+    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Validate role
+    if role_data.role not in [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE]:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    
+    # Update role in both users and employees collections
+    await db.users.update_one(
+        {"email": employee['email']},
+        {"$set": {"role": role_data.role}}
+    )
+    
+    await db.employees.update_one(
+        {"id": employee_id},
+        {"$set": {"role": role_data.role}}
+    )
+    
+    return {"message": f"Role updated to {role_data.role}", "employee_id": employee_id, "new_role": role_data.role}
+
 @api_router.delete("/employees/{employee_id}")
 async def delete_employee(
     employee_id: str,
