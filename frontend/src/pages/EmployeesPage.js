@@ -505,6 +505,17 @@ const EmployeesPage = () => {
               <SelectItem value="employee">Employee</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={filterOrganization} onValueChange={setFilterOrganization}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Organization" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Organizations</SelectItem>
+              {organizations.map(org => (
+                <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
