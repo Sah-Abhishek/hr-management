@@ -30,7 +30,22 @@ const LeavesPage = () => {
 
   useEffect(() => {
     fetchLeaves();
+    loadLeaveTypes();
   }, []);
+
+  const loadLeaveTypes = () => {
+    const saved = localStorage.getItem('leave_types');
+    if (saved) {
+      setLeaveTypes(JSON.parse(saved));
+    } else {
+      setLeaveTypes([
+        { name: 'Sick Leave', quota: 12 },
+        { name: 'Casual Leave', quota: 12 },
+        { name: 'Paid Leave', quota: 15 },
+        { name: 'Unpaid Leave', quota: 0 }
+      ]);
+    }
+  };
 
   const fetchLeaves = async () => {
     try {
