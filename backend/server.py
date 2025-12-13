@@ -124,6 +124,7 @@ class EmployeeUpdate(BaseModel):
     designation: Optional[str] = None
     phone: Optional[str] = None
     manager_email: Optional[EmailStr] = None
+    employee_id: Optional[str] = None
 
 # Leave Models
 class ApprovalRecord(BaseModel):
