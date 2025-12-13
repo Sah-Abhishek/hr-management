@@ -149,8 +149,10 @@ class Leave(BaseModel):
     leave_type: str
     start_date: datetime
     end_date: datetime
-    days_count: int
+    days_count: float  # Changed to float to support 0.5 for half-day
     reason: str
+    is_half_day: bool = False
+    half_day_period: Optional[str] = None
     status: str = LeaveStatus.PENDING
     approvals: List[ApprovalRecord] = []
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
