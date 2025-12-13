@@ -102,6 +102,40 @@ const SettingsPage = () => {
     toast.success('Designation removed');
   };
 
+  const saveLeaveTypes = (types) => {
+    localStorage.setItem('leave_types', JSON.stringify(types));
+    setLeaveTypes(types);
+  };
+
+  const addLeaveType = () => {
+    if (!newLeaveType.name.trim()) {
+      toast.error('Please enter leave type name');
+      return;
+    }
+    if (newLeaveType.quota === '' || isNaN(newLeaveType.quota)) {
+      toast.error('Please enter valid annual quota');
+      return;
+    }
+    if (leaveTypes.some(lt => lt.name.toLowerCase() === newLeaveType.name.toLowerCase())) {
+      toast.error('Leave type already exists');
+      return;
+    }
+    
+    const updated = [...leaveTypes, { 
+      name: newLeaveType.name.trim(), 
+      quota: parseInt(newLeaveType.quota) 
+    }];
+    saveLeaveTypes(updated);
+    setNewLeaveType({ name: '', quota: '' });
+    toast.success('Leave type added');
+  };
+
+  const removeLeaveType = (typeName) => {
+    const updated = leaveTypes.filter(lt => lt.name !== typeName);
+    saveLeaveTypes(updated);
+    toast.success('Leave type removed');
+  };
+
   return (
     <div className="p-6 md:p-10 space-y-6">
       {/* Header */}
