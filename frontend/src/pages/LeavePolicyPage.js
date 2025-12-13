@@ -7,14 +7,43 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 const LeavePolicyPage = () => {
-  const [policy, setPolicy] = useState({
-    sick_leave: 12,
-    casual_leave: 12,
-    paid_leave: 15,
-    unpaid_leave: 0,
-  });
-
+  const [leaveTypes, setLeaveTypes] = useState([]);
+  const [policy, setPolicy] = useState({});
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadLeaveTypesAndPolicy();
+  }, []);
+
+  const loadLeaveTypesAndPolicy = () => {
+    // Load leave types from Settings
+    const savedTypes = localStorage.getItem('leave_types');
+    const types = savedTypes ? JSON.parse(savedTypes) : [
+      'Sick Leave',
+      'Casual Leave', 
+      'Paid Leave',
+      'Unpaid Leave'
+    ];
+    setLeaveTypes(types);
+
+    // Load saved policy
+    const savedPolicy = localStorage.getItem('leave_policy');
+    if (savedPolicy) {
+      setPolicy(JSON.parse(savedPolicy));
+    } else {
+      // Initialize with default quotas
+      const defaultPolicy = {};
+      types.forEach(type => {
+        const key = type.toLowerCase().replace(/ /g, '_');
+        defaultPolicy[key] = 0;
+      });
+      // Set some defaults
+      defaultPolicy['sick_leave'] = 12;
+      defaultPolicy['casual_leave'] = 12;
+      defaultPolicy['paid_leave'] = 15;
+      setPolicy(defaultPolicy);
+    }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
