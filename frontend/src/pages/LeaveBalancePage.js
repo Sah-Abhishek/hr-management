@@ -55,12 +55,27 @@ const LeaveBalancePage = () => {
     try {
       const response = await api.get('/employees');
       setEmployees(response.data);
+      
+      // Fetch comp-off records
+      try {
+        const compOffResponse = await api.get('/comp-off/records');
+        setCompOffRecords(compOffResponse.data || []);
+      } catch (err) {
+        console.log('Comp-off not available');
+      }
     } catch (error) {
       console.error('Failed to fetch employees:', error);
       toast.error('Failed to load employees');
     } finally {
       setLoading(false);
     }
+  };
+
+  const getEmployeeCompOff = (employeeId) => {
+    const records = compOffRecords.filter(r => r.employee_id === employeeId);
+    const total = records.reduce((sum, r) => sum + (r.days || 0), 0);
+    const used = records.reduce((sum, r) => sum + (r.used || 0), 0);
+    return total - used; // Available comp-off
   };
 
   const filterEmployees = () => {
