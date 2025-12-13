@@ -162,13 +162,13 @@ const LeavePolicyPage = () => {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-            <span className="text-slate-600">Total Paid Leaves per Employee:</span>
+            <span className="text-slate-600">Total Annual Leaves per Employee:</span>
             <span className="text-2xl font-bold text-slate-900">
-              {policy.sick_leave + policy.casual_leave + policy.paid_leave} days
+              {Object.values(policy).reduce((sum, val) => sum + val, 0)} days
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-2">
-            Plus unlimited unpaid leave available to all employees
+            Calculated from all configured leave types above
           </p>
         </CardContent>
       </Card>
