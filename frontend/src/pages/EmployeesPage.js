@@ -536,9 +536,14 @@ const EmployeesPage = () => {
           <CardContent className="py-12">
             <div className="text-center text-slate-500">
               <User className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-              <p className="text-lg mb-2">No employees found</p>
-              {user?.role === 'admin' && (
+              <p className="text-lg mb-2">
+                {employees.length === 0 ? 'No employees found' : 'No employees match your search criteria'}
+              </p>
+              {employees.length === 0 && user?.role === 'admin' && (
                 <p className="text-sm">Click &quot;Add Employee&quot; to create your first employee</p>
+              )}
+              {employees.length > 0 && (
+                <p className="text-sm">Try adjusting your search or filters</p>
               )}
             </div>
           </CardContent>
