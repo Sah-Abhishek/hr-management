@@ -19,6 +19,7 @@ const SettingsPage = () => {
     // Load from localStorage
     const savedDepts = localStorage.getItem('departments');
     const savedDesigs = localStorage.getItem('designations');
+    const savedLeaveTypes = localStorage.getItem('leave_types');
     
     setDepartments(savedDepts ? JSON.parse(savedDepts) : [
       'Engineering',
@@ -39,6 +40,13 @@ const SettingsPage = () => {
       'Marketing Manager',
       'Finance Manager',
       'Operations Manager'
+    ]);
+    
+    setLeaveTypes(savedLeaveTypes ? JSON.parse(savedLeaveTypes) : [
+      { name: 'Sick Leave', quota: 12 },
+      { name: 'Casual Leave', quota: 12 },
+      { name: 'Paid Leave', quota: 15 },
+      { name: 'Unpaid Leave', quota: 0 }
     ]);
   }, []);
 
