@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Settings } from 'lucide-react';
+import { Plus, X, Settings, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import api from '@/lib/api';
 
 const SettingsPage = () => {
   const [departments, setDepartments] = useState([]);
@@ -14,6 +15,9 @@ const SettingsPage = () => {
   const [newDepartment, setNewDepartment] = useState('');
   const [newDesignation, setNewDesignation] = useState('');
   const [newLeaveType, setNewLeaveType] = useState('');
+  const [employeeIdPrefix, setEmployeeIdPrefix] = useState('EMP');
+  const [employeeIdCounter, setEmployeeIdCounter] = useState(1000);
+  const [savingEmployeeId, setSavingEmployeeId] = useState(false);
 
   useEffect(() => {
     // Load from localStorage
