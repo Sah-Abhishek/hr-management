@@ -64,7 +64,18 @@ const LoginPage = () => {
       toast.success('Registration successful!');
       navigate('/');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Registration failed');
+      let errorMessage = 'Registration failed';
+      
+      if (error.response?.data?.detail) {
+        // Handle array of validation errors
+        if (Array.isArray(error.response.data.detail)) {
+          errorMessage = error.response.data.detail.map(err => err.msg || err).join(', ');
+        } else if (typeof error.response.data.detail === 'string') {
+          errorMessage = error.response.data.detail;
+        }
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
