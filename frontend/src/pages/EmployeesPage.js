@@ -159,16 +159,6 @@ const EmployeesPage = () => {
     }
   };
 
-  const handleRoleChange = async (employeeId, newRole) => {
-    try {
-      await api.put(`/employees/${employeeId}/role`, { role: newRole });
-      toast.success(`Role updated to ${newRole}`);
-      fetchEmployees();
-    } catch (error) {
-      toast.error('Failed to update role');
-    }
-  };
-
   // Filter and search employees
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch = searchTerm === '' || 
