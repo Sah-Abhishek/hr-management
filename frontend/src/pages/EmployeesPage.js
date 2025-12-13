@@ -365,6 +365,23 @@ const EmployeesPage = () => {
                 />
               </div>
               <div>
+                <Label htmlFor="edit-emp-organization">Organization</Label>
+                <Select
+                  value={selectedEmployee.organization_id || ''}
+                  onValueChange={(value) => setSelectedEmployee({ ...selectedEmployee, organization_id: value })}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select organization (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {organizations.map(org => (
+                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label htmlFor="edit-emp-department">Department *</Label>
                 <Select
                   value={selectedEmployee.department}
