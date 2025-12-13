@@ -516,7 +516,7 @@ async def apply_leave(
     current_employee: Employee = Depends(get_current_employee)
 ):
     # Calculate days
-    days_count = calculate_days(leave_data.start_date, leave_data.end_date)
+    days_count = calculate_days(leave_data.start_date, leave_data.end_date, leave_data.is_half_day)
     
     # Check leave balance
     leave_balance_dict = current_employee.leave_balance.model_dump()
@@ -541,6 +541,8 @@ async def apply_leave(
         end_date=leave_data.end_date,
         days_count=days_count,
         reason=leave_data.reason,
+        is_half_day=leave_data.is_half_day,
+        half_day_period=leave_data.half_day_period,
         status=LeaveStatus.PENDING
     )
     
