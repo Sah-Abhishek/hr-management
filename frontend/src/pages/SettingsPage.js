@@ -108,30 +108,23 @@ const SettingsPage = () => {
   };
 
   const addLeaveType = () => {
-    if (!newLeaveType.name.trim()) {
+    if (!newLeaveType.trim()) {
       toast.error('Please enter leave type name');
       return;
     }
-    if (newLeaveType.quota === '' || isNaN(newLeaveType.quota)) {
-      toast.error('Please enter valid annual quota');
-      return;
-    }
-    if (leaveTypes.some(lt => lt.name.toLowerCase() === newLeaveType.name.toLowerCase())) {
+    if (leaveTypes.some(lt => lt.toLowerCase() === newLeaveType.toLowerCase())) {
       toast.error('Leave type already exists');
       return;
     }
     
-    const updated = [...leaveTypes, { 
-      name: newLeaveType.name.trim(), 
-      quota: parseInt(newLeaveType.quota) 
-    }];
+    const updated = [...leaveTypes, newLeaveType.trim()];
     saveLeaveTypes(updated);
-    setNewLeaveType({ name: '', quota: '' });
-    toast.success('Leave type added');
+    setNewLeaveType('');
+    toast.success('Leave type added. Set quota in Leave Policy page.');
   };
 
   const removeLeaveType = (typeName) => {
-    const updated = leaveTypes.filter(lt => lt.name !== typeName);
+    const updated = leaveTypes.filter(lt => lt !== typeName);
     saveLeaveTypes(updated);
     toast.success('Leave type removed');
   };
