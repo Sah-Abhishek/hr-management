@@ -283,20 +283,15 @@ const SettingsPage = () => {
               ) : (
                 leaveTypes.map((leaveType) => (
                   <div
-                    key={leaveType.name}
-                    data-testid={`leave-type-${leaveType.name}`}
+                    key={leaveType}
+                    data-testid={`leave-type-${leaveType}`}
                     className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors"
                   >
-                    <div className="flex-1">
-                      <span className="text-slate-900 font-medium">{leaveType.name}</span>
-                      <span className="text-sm text-slate-500 ml-2">
-                        ({leaveType.quota === 0 ? 'Unlimited' : `${leaveType.quota} days/year`})
-                      </span>
-                    </div>
+                    <span className="text-slate-900 font-medium">{leaveType}</span>
                     <button
-                      onClick={() => removeLeaveType(leaveType.name)}
+                      onClick={() => removeLeaveType(leaveType)}
                       className="text-red-500 hover:text-red-700 transition-colors"
-                      data-testid={`remove-leave-type-${leaveType.name}`}
+                      data-testid={`remove-leave-type-${leaveType}`}
                     >
                       <X className="w-4 h-4" />
                     </button>
