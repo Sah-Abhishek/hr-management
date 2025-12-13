@@ -13,6 +13,7 @@ const OrganizationsPage = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingOrg, setEditingOrg] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     logo_url: '',
@@ -83,6 +84,37 @@ const OrganizationsPage = () => {
     setEditingOrg(null);
     setFormData({ name: '', logo_url: '', description: '' });
     setShowModal(true);
+  };
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image size should be less than 2MB');
+      return;
+    }
+
+    setUploading(true);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData({ ...formData, logo_url: reader.result });
+      setUploading(false);
+      toast.success('Logo uploaded successfully');
+    };
+    reader.onerror = () => {
+      toast.error('Failed to upload logo');
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   if (loading) {
@@ -195,16 +227,49 @@ const OrganizationsPage = () => {
               </div>
 
               <div>
-                <Label htmlFor="org-logo">Logo URL</Label>
-                <Input
-                  id="org-logo"
-                  type="url"
-                  placeholder="https://example.com/logo.png"
-                  value={formData.logo_url}
-                  onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
-                  className="mt-1"
-                />
-                <p className="text-xs text-slate-500 mt-1">Enter a URL to your organization's logo</p>
+                <Label htmlFor="org-logo">Organization Logo</Label>
+                <div className="mt-2 space-y-3">
+                  {/* Logo Preview */}
+                  {formData.logo_url && (
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={formData.logo_url}
+                        alt="Logo preview"
+                        className="w-16 h-16 rounded-lg object-cover border border-slate-200"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setFormData({ ...formData, logo_url: '' })}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* Upload Button */}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="logo-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('logo-upload').click()}
+                      disabled={uploading}
+                      className="w-full"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {uploading ? 'Uploading...' : 'Upload Logo'}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-500">Upload an image (max 2MB, PNG/JPG)</p>
+                </div>
               </div>
 
               <div>
