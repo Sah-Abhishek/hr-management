@@ -34,6 +34,7 @@ const Layout = () => {
     { name: 'Employees', href: '/employees', icon: Users, roles: ['admin', 'manager'] },
     { name: 'Hierarchy', href: '/hierarchy', icon: Network, roles: ['admin', 'manager'] },
     { name: 'My Leaves', href: '/leaves', icon: FileText, roles: ['admin', 'manager', 'employee'] },
+    { name: 'All Leaves', href: '/all-leaves', icon: ClipboardList, roles: ['admin'] },
     { name: 'Approvals', href: '/approvals', icon: CheckSquare, roles: ['admin', 'manager'] },
     { name: 'Leave Policy', href: '/leave-policy', icon: FileText, roles: ['admin'] },
     { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
