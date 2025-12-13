@@ -1249,6 +1249,105 @@ def generate_leave_approval_email(employee_name: str, leave_type: str, start_dat
     </html>
     """
 
+def generate_welcome_email(employee_name: str, employee_id: str, email: str, role: str, department: str, designation: str):
+    """Generate welcome email for new employee"""
+    return f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <h2 style="color: #10b981; border-bottom: 3px solid #10b981; padding-bottom: 10px;">Welcome to HRMS! 🎉</h2>
+            <p>Dear <strong>{employee_name}</strong>,</p>
+            <p>Welcome aboard! Your account has been successfully created in our HRMS Leave Management System.</p>
+            
+            <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <h3 style="margin-top: 0; color: #166534;">Your Account Details</h3>
+                <table style="width: 100%;">
+                    <tr>
+                        <td style="padding: 5px 0;"><strong>Employee ID:</strong></td>
+                        <td style="padding: 5px 0;">{employee_id}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px 0;"><strong>Email:</strong></td>
+                        <td style="padding: 5px 0;">{email}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px 0;"><strong>Role:</strong></td>
+                        <td style="padding: 5px 0; text-transform: capitalize;">{role}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px 0;"><strong>Department:</strong></td>
+                        <td style="padding: 5px 0;">{department}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px 0;"><strong>Designation:</strong></td>
+                        <td style="padding: 5px 0;">{designation}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <p>You can now:</p>
+            <ul>
+                <li>Apply for leaves</li>
+                <li>View your leave balance</li>
+                <li>Track leave application status</li>
+                <li>Update your profile information</li>
+            </ul>
+            
+            <p style="margin-top: 20px;">If you have any questions, please contact your HR administrator.</p>
+            
+            <p style="color: #64748b; font-size: 12px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                This is an automated notification from HRMS Leave Management System.
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+
+def generate_new_employee_notification_email(employee_name: str, employee_id: str, email: str, role: str, department: str, designation: str, admin_name: str):
+    """Generate notification email to admin about new employee"""
+    return f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <h2 style="color: #1e293b; border-bottom: 3px solid #3b82f6; padding-bottom: 10px;">New Employee Added</h2>
+            <p>Hello {admin_name},</p>
+            <p>A new employee has been added to the HRMS system:</p>
+            
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr style="background-color: #f8fafc;">
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>Employee Name:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;">{employee_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>Employee ID:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;">{employee_id}</td>
+                </tr>
+                <tr style="background-color: #f8fafc;">
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>Email:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;">{email}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>Role:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0; text-transform: capitalize;">{role}</td>
+                </tr>
+                <tr style="background-color: #f8fafc;">
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>Department:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;">{department}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;"><strong>Designation:</strong></td>
+                    <td style="padding: 10px; border: 1px solid #e2e8f0;">{designation}</td>
+                </tr>
+            </table>
+            
+            <p style="color: #64748b; font-size: 12px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                This is an automated notification from HRMS Leave Management System.
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+
 # Include router
 app.include_router(api_router)
 
