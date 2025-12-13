@@ -93,13 +93,25 @@ const NotificationSettingsPage = () => {
         }
       }
 
-      // Save to localStorage
-      localStorage.setItem('whatsapp_notifications_enabled', whatsappEnabled);
-      localStorage.setItem('whatsapp_config', JSON.stringify(whatsappConfig));
+      // Save to backend
+      const settings = {
+        email_enabled: emailEnabled,
+        whatsapp_enabled: whatsappEnabled,
+        smtp_host: emailConfig.smtp_host,
+        smtp_port: parseInt(emailConfig.smtp_port),
+        smtp_username: emailConfig.smtp_username,
+        smtp_password: emailConfig.smtp_password,
+        from_email: emailConfig.from_email,
+        from_name: emailConfig.from_name,
+        twilio_account_sid: whatsappConfig.api_key,
+        twilio_auth_token: whatsappConfig.api_key,
+        twilio_phone_number: whatsappConfig.phone_number_id
+      };
 
+      await api.post('/notification-settings', settings);
       toast.success('WhatsApp settings saved successfully!');
     } catch (error) {
-      toast.error('Failed to save WhatsApp settings');
+      toast.error(error.response?.data?.detail || 'Failed to save WhatsApp settings');
     } finally {
       setSaving(false);
     }
