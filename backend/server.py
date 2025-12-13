@@ -837,45 +837,45 @@ async def get_dashboard_stats(
 
 # ============= COMP-OFF ENDPOINTS =============
 
-@api_router.post(\"/comp-off/grant\")
+@api_router.post("/comp-off/grant")
 async def grant_comp_off(
     comp_off_data: CompOffGrant,
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
 ):
     # Verify employee exists
-    employee = await db.employees.find_one({\"id\": comp_off_data.employee_id}, {\"_id\": 0})
+    employee = await db.employees.find_one({"id": comp_off_data.employee_id}, {"_id": 0})
     if not employee:
-        raise HTTPException(status_code=404, detail=\"Employee not found\")
+        raise HTTPException(status_code=404, detail="Employee not found")
     
     # Create comp-off record
     comp_off_record = {
-        \"id\": str(uuid.uuid4()),
-        \"employee_id\": comp_off_data.employee_id,
-        \"employee_email\": comp_off_data.employee_email,
-        \"employee_name\": comp_off_data.employee_name,
-        \"days\": comp_off_data.days,
-        \"used\": 0,
-        \"work_date\": comp_off_data.work_date,
-        \"reason\": comp_off_data.reason,
-        \"granted_by\": comp_off_data.granted_by,
-        \"granted_by_role\": comp_off_data.granted_by_role,
-        \"granted_date\": datetime.now(timezone.utc).isoformat(),
-        \"expiry_date\": (datetime.now(timezone.utc) + timedelta(days=90)).isoformat()  # 90 days validity
+        "id": str(uuid.uuid4()),
+        "employee_id": comp_off_data.employee_id,
+        "employee_email": comp_off_data.employee_email,
+        "employee_name": comp_off_data.employee_name,
+        "days": comp_off_data.days,
+        "used": 0,
+        "work_date": comp_off_data.work_date,
+        "reason": comp_off_data.reason,
+        "granted_by": comp_off_data.granted_by,
+        "granted_by_role": comp_off_data.granted_by_role,
+        "granted_date": datetime.now(timezone.utc).isoformat(),
+        "expiry_date": (datetime.now(timezone.utc) + timedelta(days=90)).isoformat()  # 90 days validity
     }
     
     await db.comp_off_records.insert_one(comp_off_record)
     
     return {
-        \"message\": \"Comp-off granted successfully\",
-        \"comp_off_id\": comp_off_record[\"id\"],
-        \"days\": comp_off_data.days
+        "message": "Comp-off granted successfully",
+        "comp_off_id": comp_off_record["id"],
+        "days": comp_off_data.days
     }
 
-@api_router.get(\"/comp-off/records\")
+@api_router.get("/comp-off/records")
 async def get_comp_off_records(
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
 ):
-    records = await db.comp_off_records.find({}, {\"_id\": 0}).to_list(1000)
+    records = await db.comp_off_records.find({}, {"_id": 0}).to_list(1000)
     return records
 
 # Include router
