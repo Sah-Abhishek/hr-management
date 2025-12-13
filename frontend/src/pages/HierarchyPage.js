@@ -29,7 +29,7 @@ const HierarchyPage = () => {
   };
 
   const buildHierarchy = (emps) => {
-    // Group employees by department
+    // Build tree structure: Admin → Managers → Employees (by department)
     const deptMap = {};
     
     emps.forEach(emp => {
@@ -53,8 +53,18 @@ const HierarchyPage = () => {
     setHierarchy(deptMap);
   };
 
+  // Get employees for a specific manager based on their email
   const getTeamMembers = (managerEmail) => {
     return employees.filter(emp => emp.manager_email === managerEmail);
+  };
+  
+  // Get all employees in a department (for role-based hierarchy)
+  const getDepartmentEmployees = (department) => {
+    return employees.filter(emp => emp.department === department && emp.role === 'employee');
+  };
+  
+  const getDepartmentManagers = (department) => {
+    return employees.filter(emp => emp.department === department && emp.role === 'manager');
   };
 
   if (loading) {
