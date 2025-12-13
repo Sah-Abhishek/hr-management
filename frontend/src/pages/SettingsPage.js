@@ -146,6 +146,36 @@ const SettingsPage = () => {
     toast.success('Leave type removed');
   };
 
+  const saveEmployeeIdSettings = async () => {
+    if (!employeeIdPrefix.trim()) {
+      toast.error('Please enter a prefix');
+      return;
+    }
+    
+    if (!/^[A-Z]+$/.test(employeeIdPrefix)) {
+      toast.error('Prefix must contain only uppercase letters');
+      return;
+    }
+    
+    if (employeeIdCounter < 1) {
+      toast.error('Counter must be at least 1');
+      return;
+    }
+
+    setSavingEmployeeId(true);
+    try {
+      await api.post('/employee-id-settings', {
+        prefix: employeeIdPrefix.toUpperCase(),
+        counter: parseInt(employeeIdCounter)
+      });
+      toast.success('Employee ID settings saved successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save settings');
+    } finally {
+      setSavingEmployeeId(false);
+    }
+  };
+
   return (
     <div className="p-6 md:p-10 space-y-6">
       {/* Header */}
