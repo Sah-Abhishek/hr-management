@@ -91,6 +91,15 @@ class LeaveBalance(BaseModel):
     paid_leave: int = 15
     unpaid_leave: int = 0
 
+# Organization Model
+class Organization(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    logo_url: Optional[str] = None
+    description: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: Optional[str] = None
+
 class EmployeeCreate(BaseModel):
     email: EmailStr
     password: str
