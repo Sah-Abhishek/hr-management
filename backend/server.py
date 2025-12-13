@@ -136,6 +136,8 @@ class LeaveApplication(BaseModel):
     start_date: datetime
     end_date: datetime
     reason: str
+    is_half_day: bool = False
+    half_day_period: Optional[str] = None  # 'morning' or 'afternoon'
 
 class Leave(BaseModel):
     model_config = ConfigDict(extra="ignore")
