@@ -1,0 +1,124 @@
+{
+  "timestamp": "2025-12-13T20:37:56.891204",
+  "total_tests": 23,
+  "passed_tests": 23,
+  "failed_tests": 0,
+  "success_rate": 100.0,
+  "test_results": [
+    {
+      "test": "Admin Registration",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Manager Registration",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Employee Registration",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Admin Login",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Current User Profile",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Dashboard Stats - Admin",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Dashboard Stats - Manager",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Dashboard Stats - Employee",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get All Employees - Admin",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get All Employees - Manager",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get All Employees - Employee (Should Fail)",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Create New Employee - Admin",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Specific Employee",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Update Employee",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Apply for Leave - Employee",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get My Leaves - Employee",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Pending Leaves - Manager",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Pending Leaves - Admin",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get All Leaves - Admin",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Manager Approve Leave",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Admin Final Approve Leave",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Current Profile",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Update Profile",
+      "success": true,
+      "details": ""
+    }
+  ]
+}
