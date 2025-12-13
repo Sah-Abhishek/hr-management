@@ -107,126 +107,42 @@ const ReportsPage = () => {
         return;
       }
       
-      // Header
-      doc.setFontSize(20);
-      doc.setTextColor(30, 41, 59); // slate-900
-      doc.text('Leave Report', 14, 22);
-      
-      // Report Info
-      doc.setFontSize(10);
-      doc.setTextColor(100, 116, 139); // slate-500
-      doc.text(`Generated: ${format(new Date(), 'PPP')}`, 14, 30);
-      doc.text(`Period: ${format(new Date(filters.month), 'MMMM yyyy')}`, 14, 36);
-      
-      // Filters applied
-      let yPos = 42;
-      if (filters.department !== 'all') {
-        doc.text(`Department: ${filters.department}`, 14, yPos);
-        yPos += 6;
-      }
-      if (filters.organization_id !== 'all') {
-        const org = organizations.find(o => o.id === filters.organization_id);
-        doc.text(`Organization: ${org?.name || 'N/A'}`, 14, yPos);
-        yPos += 6;
-      }
-      if (filters.employee_id !== 'all') {
-        const emp = employees.find(e => e.id === filters.employee_id);
-        doc.text(`Employee: ${emp?.full_name || 'N/A'}`, 14, yPos);
-        yPos += 6;
-      }
-
-      // Summary Statistics
-      yPos += 6;
-      doc.setFontSize(12);
-      doc.setTextColor(30, 41, 59);
-      doc.text('Summary', 14, yPos);
-      
-      yPos += 8;
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Total Leave Applications: ${filteredLeaves.length}`, 14, yPos);
-      yPos += 6;
-      doc.text(`Approved: ${filteredLeaves.filter(l => l.status === 'approved').length}`, 14, yPos);
-      yPos += 6;
-      doc.text(`Pending: ${filteredLeaves.filter(l => l.status === 'pending').length}`, 14, yPos);
-      yPos += 6;
-      doc.text(`Rejected: ${filteredLeaves.filter(l => l.status === 'rejected').length}`, 14, yPos);
-      
-      yPos += 10;
-
-      // Prepare table data
-      const tableData = filteredLeaves.map(leave => {
+      // Prepare CSV data
+      const csvData = filteredLeaves.map(leave => {
         const employee = employees.find(e => e.id === leave.employee_id);
-        return [
-          employee?.full_name || 'N/A',
-          employee?.department || 'N/A',
-          leave.leave_type,
-          format(new Date(leave.start_date), 'dd/MM/yyyy'),
-          format(new Date(leave.end_date), 'dd/MM/yyyy'),
-          leave.days_count,
-          leave.status.charAt(0).toUpperCase() + leave.status.slice(1)
-        ];
+        return {
+          'Employee Name': employee?.full_name || 'N/A',
+          'Employee ID': employee?.employee_id || employee?.id || 'N/A',
+          'Department': employee?.department || 'N/A',
+          'Designation': employee?.designation || 'N/A',
+          'Leave Type': leave.leave_type,
+          'Start Date': format(new Date(leave.start_date), 'dd/MM/yyyy'),
+          'End Date': format(new Date(leave.end_date), 'dd/MM/yyyy'),
+          'Days Count': leave.days_count,
+          'Reason': leave.reason || '',
+          'Status': leave.status.charAt(0).toUpperCase() + leave.status.slice(1),
+          'Applied Date': format(new Date(leave.created_at), 'dd/MM/yyyy')
+        };
       });
 
-      // Add table
-      doc.autoTable({
-        startY: yPos,
-        head: [['Employee', 'Department', 'Leave Type', 'Start Date', 'End Date', 'Days', 'Status']],
-        body: tableData,
-        theme: 'striped',
-        headStyles: {
-          fillColor: [30, 41, 59], // slate-900
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-          fontSize: 9
-        },
-        bodyStyles: {
-          fontSize: 8,
-          textColor: [71, 85, 105]
-        },
-        alternateRowStyles: {
-          fillColor: [248, 250, 252] // slate-50
-        },
-        margin: { top: 10 },
-        didParseCell: (data) => {
-          // Color code status column
-          if (data.column.index === 6 && data.section === 'body') {
-            const status = data.cell.raw;
-            if (status === 'Approved') {
-              data.cell.styles.textColor = [16, 185, 129]; // green
-              data.cell.styles.fontStyle = 'bold';
-            } else if (status === 'Rejected') {
-              data.cell.styles.textColor = [239, 68, 68]; // red
-              data.cell.styles.fontStyle = 'bold';
-            } else if (status === 'Pending') {
-              data.cell.styles.textColor = [251, 146, 60]; // orange
-              data.cell.styles.fontStyle = 'bold';
-            }
-          }
-        }
-      });
-
-      // Footer
-      const pageCount = doc.internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(148, 163, 184); // slate-400
-        doc.text(
-          `Page ${i} of ${pageCount}`,
-          doc.internal.pageSize.getWidth() / 2,
-          doc.internal.pageSize.getHeight() - 10,
-          { align: 'center' }
-        );
-      }
-
-      // Save PDF
-      const fileName = `leave_report_${filters.month}_${Date.now()}.pdf`;
-      doc.save(fileName);
+      // Convert to CSV
+      const csv = Papa.unparse(csvData);
       
-      toast.success('Report generated successfully!');
+      // Create and download file
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `leave_report_${filters.month}_${Date.now()}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Report exported successfully!');
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      console.error('Error generating CSV:', error);
       toast.error('Failed to generate report');
     } finally {
       setGenerating(false);
@@ -347,12 +263,12 @@ const ReportsPage = () => {
               </div>
 
               <Button
-                onClick={generatePDF}
+                onClick={exportToCSV}
                 disabled={generating}
                 className="w-full bg-slate-800 hover:bg-slate-900"
               >
                 <Download className="w-4 h-4 mr-2" />
-                {generating ? 'Generating...' : 'Export PDF'}
+                {generating ? 'Generating...' : 'Export CSV'}
               </Button>
             </CardContent>
           </Card>
