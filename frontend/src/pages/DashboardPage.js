@@ -165,6 +165,9 @@ const DashboardPage = () => {
                     </div>
                     <p className="text-sm text-slate-600">
                       {leave.leave_type} - {leave.days_count} day{leave.days_count > 1 ? 's' : ''}
+                      {leave.is_half_day && (
+                        <span> • Half Day ({leave.half_day_period})</span>
+                      )}
                     </p>
                     <p className="text-xs text-slate-500 mt-1">
                       {format(new Date(leave.start_date), 'MMM dd, yyyy')} -{' '}
