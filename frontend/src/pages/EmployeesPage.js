@@ -364,6 +364,16 @@ const EmployeesPage = () => {
                   <h3 className="font-semibold text-slate-900 text-lg truncate">{employee.full_name}</h3>
                   <Badge className="mt-1 capitalize">{employee.role}</Badge>
                 </div>
+                {user?.role === 'admin' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(employee)}
+                    className="text-slate-500 hover:text-slate-700"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
 
               <div className="space-y-3">
