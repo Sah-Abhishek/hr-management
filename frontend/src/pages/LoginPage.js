@@ -141,7 +141,7 @@ const LoginPage = () => {
             <TabsContent value="register">
               <Card>
                 <CardContent className="pt-6">
-                  <form onSubmit={handleRegister} className="space-y-4">
+                  <form onSubmit={handleRegister} className="space-y-4" noValidate>
                     <div>
                       <Label htmlFor="reg-name">Full Name</Label>
                       <Input
