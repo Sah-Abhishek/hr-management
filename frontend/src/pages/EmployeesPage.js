@@ -119,6 +119,8 @@ const EmployeesPage = () => {
     setSubmitting(true);
 
     try {
+      const originalEmployee = employees.find(emp => emp.id === selectedEmployee.id);
+      
       // First update the employee profile
       await api.put(`/employees/${selectedEmployee.id}`, {
         full_name: selectedEmployee.full_name,
@@ -128,8 +130,12 @@ const EmployeesPage = () => {
         manager_email: selectedEmployee.manager_email === 'none' ? '' : selectedEmployee.manager_email,
       });
 
-      // If role changed, we need to update the user record (backend handles this)
-      // The role is stored in the users collection, so we need a separate endpoint
+      // If role changed, update it separately
+      if (originalEmployee.role !== selectedEmployee.role) {
+        await api.put(`/employees/${selectedEmployee.id}/role`, {
+          role: selectedEmployee.role
+        });
+      }
       
       toast.success('Employee updated successfully!');
       setEditDialogOpen(false);
