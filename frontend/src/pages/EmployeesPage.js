@@ -91,6 +91,7 @@ const EmployeesPage = () => {
         ...employeeForm,
         role: 'employee', // Default role
         designation: 'Employee', // Default designation
+        organization_id: employeeForm.organization_id || null,
         manager_email: employeeForm.manager_email === 'none' ? '' : employeeForm.manager_email
       });
       toast.success('Employee added successfully!');
@@ -101,6 +102,7 @@ const EmployeesPage = () => {
         full_name: '',
         department: '',
         phone: '',
+        organization_id: '',
         manager_email: '',
       });
       fetchEmployees();
