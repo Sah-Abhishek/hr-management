@@ -2262,19 +2262,234 @@ def generate_new_employee_notification_email(employee_name: str, employee_id: st
     </html>
     """
 
+# Setup Models
+class SetupDBConfig(BaseModel):
+    mongo_url: str
+    db_name: str
+    pem_certificate: Optional[str] = None
+
+class SetupAdminConfig(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+# Setup Endpoints
+@app.get("/api/setup/status")
+async def get_setup_status():
+    """Check if setup is completed"""
+    return {
+        "setup_completed": is_setup_completed(),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.post("/api/setup/test-connection")
+async def test_database_connection(config: SetupDBConfig):
+    """Test MongoDB connection"""
+    try:
+        # Save PEM certificate if provided
+        pem_path = None
+        if config.pem_certificate:
+            pem_path = ROOT_DIR / 'mongodb_cert.pem'
+            with open(pem_path, 'w') as f:
+                f.write(config.pem_certificate)
+        
+        # Test connection
+        if pem_path:
+            test_client = AsyncIOMotorClient(
+                config.mongo_url,
+                tls=True,
+                tlsCAFile=str(pem_path)
+            )
+        else:
+            test_client = AsyncIOMotorClient(config.mongo_url)
+        
+        # Ping the database
+        test_db = test_client[config.db_name]
+        await test_db.command('ping')
+        test_client.close()
+        
+        return {
+            "success": True,
+            "message": "Successfully connected to MongoDB!",
+            "db_name": config.db_name
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Connection failed: {str(e)}"
+        }
+
+@app.post("/api/setup/configure")
+async def configure_setup(db_config: SetupDBConfig, admin_config: SetupAdminConfig):
+    """Complete setup: configure database and create admin user"""
+    global client, db
+    
+    try:
+        # 1. Test and save database configuration
+        pem_path = None
+        if db_config.pem_certificate:
+            pem_path = ROOT_DIR / 'mongodb_cert.pem'
+            with open(pem_path, 'w') as f:
+                f.write(db_config.pem_certificate)
+        
+        # Connect to database
+        if pem_path:
+            client = AsyncIOMotorClient(
+                db_config.mongo_url,
+                tls=True,
+                tlsCAFile=str(pem_path)
+            )
+        else:
+            client = AsyncIOMotorClient(db_config.mongo_url)
+        
+        db = client[db_config.db_name]
+        await db.command('ping')
+        
+        # 2. Check if admin already exists
+        existing_admin = await db.users.find_one({"role": "admin"})
+        if existing_admin:
+            return {
+                "success": False,
+                "message": "Admin user already exists. Setup may have been completed already."
+            }
+        
+        # 3. Create admin user
+        hashed_password = pwd_context.hash(admin_config.password)
+        admin_user = {
+            "id": str(uuid.uuid4()),
+            "employee_id": "ADMIN001",
+            "name": admin_config.name,
+            "email": admin_config.email,
+            "password": hashed_password,
+            "role": "admin",
+            "department": "Administration",
+            "designation": "System Administrator",
+            "phone": "",
+            "date_of_joining": datetime.now(timezone.utc).isoformat(),
+            "manager_id": None,
+            "organization_id": None,
+            "salary": 0,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.users.insert_one(admin_user)
+        
+        # 4. Initialize default settings
+        default_settings = {
+            "id": str(uuid.uuid4()),
+            "departments": ["HR", "Engineering", "Sales", "Marketing", "Finance", "Operations"],
+            "designations": ["Manager", "Senior Developer", "Developer", "Analyst", "Executive"],
+            "leave_types": ["Sick Leave", "Casual Leave", "Paid Leave", "Unpaid Leave", "Comp-Off"],
+            "employee_id_prefix": "EMP",
+            "employee_id_counter": 1,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.settings.insert_one(default_settings)
+        
+        # 5. Initialize leave balances for admin
+        leave_balance = {
+            "employee_id": admin_user["id"],
+            "balances": {
+                "Sick Leave": 10.0,
+                "Casual Leave": 15.0,
+                "Paid Leave": 20.0,
+                "Unpaid Leave": 0.0,
+                "Comp-Off": 0.0
+            }
+        }
+        await db.leave_balances.insert_one(leave_balance)
+        
+        # 6. Create default salary template
+        default_template = {
+            "id": str(uuid.uuid4()),
+            "earnings": [
+                {"name": "Basic Salary", "order": 1},
+                {"name": "Dearness Allowance (DA)", "order": 2},
+                {"name": "House Rent Allowance (HRA)", "order": 3},
+                {"name": "Conveyance Allowance", "order": 4},
+                {"name": "Medical Allowance", "order": 5},
+                {"name": "Special Allowance", "order": 6}
+            ],
+            "deductions": [
+                {"name": "Professional Tax", "order": 1},
+                {"name": "Tax Deducted at Source (TDS)", "order": 2},
+                {"name": "Employee Provident Fund (EPF)", "order": 3}
+            ],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_by": admin_user["id"]
+        }
+        await db.salary_templates.insert_one(default_template)
+        
+        # 7. Update .env file
+        env_content = f"""# Production Environment Configuration
+# Backend Server Configuration
+PORT=9001
+HOST=0.0.0.0
+
+# MongoDB Configuration
+MONGO_URL={db_config.mongo_url}
+DB_NAME={db_config.db_name}
+
+# Security
+JWT_SECRET_KEY={SECRET_KEY}
+CORS_ORIGINS=http://103.142.175.170:9000,http://103.142.175.170
+
+# Application URLs
+FRONTEND_URL=http://103.142.175.170:9000
+BACKEND_URL=http://103.142.175.170:9001
+
+# Email Configuration (Optional - for notifications)
+EMAIL_PROVIDER=
+EMAIL_API_KEY=
+
+# Environment
+ENVIRONMENT=production
+"""
+        
+        env_file = ROOT_DIR / '.env'
+        with open(env_file, 'w') as f:
+            f.write(env_content)
+        
+        # 8. Mark setup as completed
+        mark_setup_completed()
+        
+        return {
+            "success": True,
+            "message": "Setup completed successfully! Please restart the backend server.",
+            "admin_email": admin_config.email
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Setup failed: {str(e)}"
+        }
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring"""
     try:
         # Test database connection
-        await db.command('ping')
-        return {
-            "status": "healthy",
-            "service": "HRMS Backend",
-            "database": "connected",
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
+        if db:
+            await db.command('ping')
+            return {
+                "status": "healthy",
+                "service": "HRMS Backend",
+                "database": "connected",
+                "setup_completed": is_setup_completed(),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        else:
+            return {
+                "status": "setup_required",
+                "service": "HRMS Backend",
+                "database": "not_configured",
+                "setup_completed": is_setup_completed(),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
     except Exception as e:
         return {
             "status": "unhealthy",
