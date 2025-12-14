@@ -65,13 +65,31 @@ const SetupPage = ({ onSetupComplete }) => {
         setConnectionTested(true);
         toast.success('Database connection successful!');
       } else {
-        setTestResult({ success: false, message: response.data.message });
+        // Check if error is about URL encoding
+        const errorMsg = response.data.message || '';
+        if (errorMsg.includes('RFC 3986') || errorMsg.includes('quote_plus')) {
+          setTestResult({ 
+            success: false, 
+            message: 'Special characters detected in username or password. Please URL-encode your credentials. Common: @ → %40, # → %23, $ → %24, % → %25'
+          });
+        } else {
+          setTestResult({ success: false, message: errorMsg });
+        }
         setConnectionTested(false);
         toast.error('Connection failed');
       }
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.message || 'Connection test failed';
-      setTestResult({ success: false, message: errorMsg });
+      
+      // Check if error is about URL encoding
+      if (errorMsg.includes('RFC 3986') || errorMsg.includes('quote_plus') || errorMsg.includes('escaped')) {
+        setTestResult({ 
+          success: false, 
+          message: '❌ Special characters in password must be URL-encoded!\n\nExamples:\n  @ → %40\n  # → %23\n  $ → %24\n  % → %25\n\nUse an online URL encoder or Python\'s urllib.parse.quote_plus()'
+        });
+      } else {
+        setTestResult({ success: false, message: errorMsg });
+      }
       setConnectionTested(false);
       toast.error('Connection test failed');
     } finally {
