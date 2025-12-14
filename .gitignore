@@ -1,7 +1,19 @@
-# Environment files
+# Environment files (exclude actual .env but keep examples)
 .env
 .env.local
+.env.development.local
+.env.test.local
 .env.production.local
+backend/.env
+frontend/.env
+
+# Keep example files
+!.env.example
+!.env.production
+!backend/.env.example
+!backend/.env.production
+!frontend/.env.example
+!frontend/.env.production
 
 # Dependencies
 node_modules/
