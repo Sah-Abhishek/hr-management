@@ -1382,6 +1382,7 @@ async def send_salary_slip(
                 <h1 style="color: white; margin: 0; font-size: 36px; font-weight: 700;">₹{net_salary:,.2f}</h1>
             </div>
             
+            
             <!-- Leave Details -->
             """ + ('''
             <div style="margin-top: 25px; padding: 20px; background: #fffbeb; border-radius: 8px; border-left: 4px solid #f59e0b;">
