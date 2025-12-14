@@ -1528,6 +1528,12 @@ async def get_monthly_payroll_summary(
 ):
     """Get payroll summary for all employees for a specific month"""
     year, month_num = month.split('-')
+    year_int = int(year)
+    month_int = int(month_num)
+    
+    # Calculate total days in the month
+    import calendar
+    total_days_in_month = calendar.monthrange(year_int, month_int)[1]
     
     employees = await db.employees.find({}, {"_id": 0}).to_list(10000)
     
@@ -1543,8 +1549,8 @@ async def get_monthly_payroll_summary(
             "employee_id": employee['id'],
             "$expr": {
                 "$and": [
-                    {"$eq": [{"$year": {"$toDate": "$start_date"}}, int(year)]},
-                    {"$eq": [{"$month": {"$toDate": "$start_date"}}, int(month_num)]}
+                    {"$eq": [{"$year": {"$toDate": "$start_date"}}, year_int]},
+                    {"$eq": [{"$month": {"$toDate": "$start_date"}}, month_int]}
                 ]
             }
         }, {"_id": 0}).to_list(1000)
@@ -1555,11 +1561,10 @@ async def get_monthly_payroll_summary(
         total_leave_days = sum(l['days_count'] for l in approved_leaves)
         unpaid_days = sum(l['days_count'] for l in unpaid_leaves)
         
-        working_days_in_month = 22
-        actual_working_days = working_days_in_month - total_leave_days
+        payable_days = total_days_in_month - unpaid_days
         
         base_salary = employee['monthly_salary']
-        per_day_salary = base_salary / working_days_in_month
+        per_day_salary = base_salary / total_days_in_month
         unpaid_deduction = unpaid_days * per_day_salary
         net_salary = base_salary - unpaid_deduction
         
@@ -1571,7 +1576,8 @@ async def get_monthly_payroll_summary(
             "department": employee['department'],
             "designation": employee['designation'],
             "base_salary": base_salary,
-            "working_days": actual_working_days,
+            "total_days_in_month": total_days_in_month,
+            "payable_days": payable_days,
             "leave_days": total_leave_days,
             "unpaid_days": unpaid_days,
             "unpaid_deduction": unpaid_deduction,
@@ -1580,6 +1586,7 @@ async def get_monthly_payroll_summary(
     
     return {
         "month": month,
+        "total_days_in_month": total_days_in_month,
         "total_employees": len(payroll_summary),
         "total_payroll": total_payroll,
         "employees": payroll_summary
