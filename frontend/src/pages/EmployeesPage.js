@@ -270,7 +270,7 @@ const EmployeesPage = () => {
                       <SelectValue placeholder="Select organization (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {organizations.map(org => (
                         <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
                       ))}
