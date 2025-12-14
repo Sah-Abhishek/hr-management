@@ -203,6 +203,14 @@ const SetupPage = ({ onSetupComplete }) => {
                   onChange={(e) => setDbConfig({ ...dbConfig, mongo_url: e.target.value })}
                   className="mt-1"
                 />
+                <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                  <p className="text-xs text-amber-800 font-medium mb-1">⚠️ Important: Special Characters</p>
+                  <p className="text-xs text-amber-700">
+                    If your password contains special characters (@, #, $, %, etc.), they must be URL-encoded:
+                    <br />
+                    <code className="bg-amber-100 px-1 py-0.5 rounded">@ → %40, # → %23, $ → %24</code>
+                  </p>
+                </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Example: mongodb+srv://user:pass@cluster.mongodb.net/?appName=hrms
                 </p>
