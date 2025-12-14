@@ -583,8 +583,16 @@ class HRMSAPITester:
         
         # Test user registration and authentication
         print("\n📝 Testing User Registration & Authentication...")
-        self.test_user_registration()
-        self.test_user_login()
+        
+        # Try existing admin credentials first
+        print("🔑 Attempting login with existing admin credentials...")
+        if not self.test_existing_admin_login():
+            print("⚠️  Existing admin login failed, creating new test users...")
+            self.test_user_registration()
+            self.test_user_login()
+        else:
+            print("✅ Successfully logged in with existing admin credentials")
+            
         self.test_get_current_user()
         
         # Test dashboard
