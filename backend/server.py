@@ -19,10 +19,34 @@ from twilio.rest import Client
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Setup configuration
+SETUP_CONFIG_FILE = ROOT_DIR / 'setup_config.json'
+import json
+
+def is_setup_completed():
+    """Check if initial setup is completed"""
+    try:
+        if SETUP_CONFIG_FILE.exists():
+            with open(SETUP_CONFIG_FILE, 'r') as f:
+                config = json.load(f)
+                return config.get('setup_completed', False)
+    except:
+        pass
+    return False
+
+def mark_setup_completed():
+    """Mark setup as completed"""
+    with open(SETUP_CONFIG_FILE, 'w') as f:
+        json.dump({'setup_completed': True}, f)
+
+# MongoDB connection - will be initialized after setup
+mongo_url = os.environ.get('MONGO_URL', '')
+client = None
+db = None
+
+if mongo_url and is_setup_completed():
+    client = AsyncIOMotorClient(mongo_url)
+    db = client[os.environ.get('DB_NAME', 'hrms_production')]
 
 # Security
 SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
