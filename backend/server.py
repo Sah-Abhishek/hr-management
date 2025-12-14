@@ -2238,6 +2238,39 @@ def generate_new_employee_notification_email(employee_name: str, employee_id: st
     </html>
     """
 
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring"""
+    try:
+        # Test database connection
+        await db.command('ping')
+        return {
+            "status": "healthy",
+            "service": "HRMS Backend",
+            "database": "connected",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "service": "HRMS Backend",
+            "database": "disconnected",
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "service": "HRMS API",
+        "version": "1.0.0",
+        "status": "running",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
 # Include router
 app.include_router(api_router)
 
