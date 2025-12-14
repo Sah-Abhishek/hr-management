@@ -2268,6 +2268,12 @@ class SetupDBConfig(BaseModel):
     db_name: str
     pem_certificate: Optional[str] = None
 
+class SetupServerConfig(BaseModel):
+    server_ip: str
+    backend_port: str
+    frontend_port: str
+    jwt_secret: str
+
 class SetupAdminConfig(BaseModel):
     name: str
     email: EmailStr
