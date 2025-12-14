@@ -1358,12 +1358,12 @@ async def send_salary_slip(
                         <td style="padding: 10px 0; color: #64748b;">Per Day Salary:</td>
                         <td style="padding: 10px 0; color: #64748b; text-align: right;">₹{per_day_salary:,.2f}</td>
                     </tr>
-                    {f'''
+                    """ + (f'''
                     <tr style="background: #fee2e2; border-left: 3px solid #ef4444;">
                         <td style="padding: 10px; color: #991b1b;">Unpaid Leave Deduction ({unpaid_days} days):</td>
                         <td style="padding: 10px; color: #991b1b; font-weight: 600; text-align: right;">- ₹{unpaid_deduction:,.2f}</td>
                     </tr>
-                    ''' if unpaid_days > 0 else ''}
+                    ''' if unpaid_days > 0 else '') + """
                 </table>
             </div>
             
@@ -1374,7 +1374,7 @@ async def send_salary_slip(
             </div>
             
             <!-- Leave Details -->
-            {f'''
+            """ + ('''
             <div style="margin-top: 25px; padding: 20px; background: #fffbeb; border-radius: 8px; border-left: 4px solid #f59e0b;">
                 <h3 style="margin: 0 0 15px 0; color: #92400e;">Leave Details</h3>
                 <table style="width: 100%; border-collapse: collapse;">
@@ -1386,7 +1386,7 @@ async def send_salary_slip(
                         </tr>
                     </thead>
                     <tbody>
-                        {''.join([f'''
+                        ''' + ''.join([f'''
                         <tr>
                             <td style="padding: 8px 0; color: #92400e;">{leave['leave_type']}</td>
                             <td style="padding: 8px 0; color: #92400e; text-align: center; font-size: 13px;">
@@ -1394,11 +1394,11 @@ async def send_salary_slip(
                             </td>
                             <td style="padding: 8px 0; color: #92400e; text-align: right; font-weight: 600;">{leave['days_count']}</td>
                         </tr>
-                        ''' for leave in approved_leaves])}
+                        ''' for leave in approved_leaves]) + '''
                     </tbody>
                 </table>
             </div>
-            ''' if approved_leaves else ''}
+            ''' if approved_leaves else '') + """
             
             <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e2e8f0; text-align: center;">
                 <p style="color: #64748b; font-size: 12px; margin: 0;">
