@@ -1263,16 +1263,22 @@ async def send_salary_slip(
         raise HTTPException(status_code=400, detail="Employee salary not configured")
     
     # Parse month
-    year, month = month_year.split('-')
-    month_name = datetime(int(year), int(month), 1).strftime('%B %Y')
+    year, month_num = month_year.split('-')
+    year_int = int(year)
+    month_int = int(month_num)
+    month_name = datetime(year_int, month_int, 1).strftime('%B %Y')
+    
+    # Calculate total days in the month
+    import calendar
+    total_days_in_month = calendar.monthrange(year_int, month_int)[1]
     
     # Get leaves for that month
     leaves = await db.leaves.find({
         "employee_id": employee_id,
         "$expr": {
             "$and": [
-                {"$eq": [{"$year": {"$toDate": "$start_date"}}, int(year)]},
-                {"$eq": [{"$month": {"$toDate": "$start_date"}}, int(month)]}
+                {"$eq": [{"$year": {"$toDate": "$start_date"}}, year_int]},
+                {"$eq": [{"$month": {"$toDate": "$start_date"}}, month_int]}
             ]
         }
     }, {"_id": 0}).to_list(1000)
@@ -1284,13 +1290,12 @@ async def send_salary_slip(
     total_leave_days = sum(l['days_count'] for l in approved_leaves)
     unpaid_days = sum(l['days_count'] for l in unpaid_leaves)
     
-    # Calculate working days (assume 22 working days per month)
-    working_days_in_month = 22
-    actual_working_days = working_days_in_month - total_leave_days
+    # Calculate actual working days (total days - unpaid leave)
+    actual_working_days = total_days_in_month - unpaid_days
     
     # Calculate salary
     base_salary = employee['monthly_salary']
-    per_day_salary = base_salary / working_days_in_month
+    per_day_salary = base_salary / total_days_in_month
     unpaid_deduction = unpaid_days * per_day_salary
     net_salary = base_salary - unpaid_deduction
     
@@ -1332,15 +1337,19 @@ async def send_salary_slip(
                 <h2 style="margin: 0 0 15px 0; color: #166534; font-size: 18px;">Attendance Summary</h2>
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
-                        <td style="padding: 8px 0; color: #15803d;">Total Working Days:</td>
-                        <td style="padding: 8px 0; color: #166534; font-weight: 600; text-align: right;">{working_days_in_month} days</td>
+                        <td style="padding: 8px 0; color: #15803d;">Total Days in Month:</td>
+                        <td style="padding: 8px 0; color: #166534; font-weight: 600; text-align: right;">{total_days_in_month} days</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #15803d;">Leaves Taken:</td>
+                        <td style="padding: 8px 0; color: #15803d;">Total Leaves Taken:</td>
                         <td style="padding: 8px 0; color: #166534; font-weight: 600; text-align: right;">{total_leave_days} days</td>
                     </tr>
+                    <tr style="background: #fee2e2;">
+                        <td style="padding: 8px 0; color: #991b1b;">Unpaid Leaves:</td>
+                        <td style="padding: 8px 0; color: #991b1b; font-weight: 600; text-align: right;">{unpaid_days} days</td>
+                    </tr>
                     <tr style="border-top: 2px solid #86efac; border-bottom: 2px solid #86efac;">
-                        <td style="padding: 12px 0; color: #166534; font-weight: 600;">Days Worked:</td>
+                        <td style="padding: 12px 0; color: #166534; font-weight: 600;">Payable Days:</td>
                         <td style="padding: 12px 0; color: #166534; font-weight: 700; text-align: right; font-size: 18px;">{actual_working_days} days</td>
                     </tr>
                 </table>
