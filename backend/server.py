@@ -87,10 +87,10 @@ class User(BaseModel):
 
 # Employee Models
 class LeaveBalance(BaseModel):
-    sick_leave: int = 12
-    casual_leave: int = 12
-    paid_leave: int = 15
-    unpaid_leave: int = 0
+    sick_leave: float = 12.0
+    casual_leave: float = 12.0
+    paid_leave: float = 15.0
+    unpaid_leave: float = 0.0
 
 # Organization Model
 class Organization(BaseModel):
