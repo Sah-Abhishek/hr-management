@@ -8,15 +8,15 @@ module.exports = {
   apps: [
     {
       name: 'hrms-backend',
-      script: 'venv/bin/uvicorn',
-      args: 'server:app --host 0.0.0.0 --port 9001',
+      script: './backend/venv/bin/python3',
+      args: '-m uvicorn server:app --host 0.0.0.0 --port 9001',
       cwd: './backend',
       instances: 1,
       exec_mode: 'fork',
       watch: false,
       max_memory_restart: '1G',
+      interpreter: 'none',
       env: {
-        NODE_ENV: 'production',
         PYTHONUNBUFFERED: '1'
       },
       error_file: './logs/backend-error.log',
