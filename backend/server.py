@@ -1462,14 +1462,20 @@ async def get_employee_payroll_report(
     
     # Parse month
     year, month_num = month.split('-')
+    year_int = int(year)
+    month_int = int(month_num)
+    
+    # Calculate total days in the month
+    import calendar
+    total_days_in_month = calendar.monthrange(year_int, month_int)[1]
     
     # Get leaves
     leaves = await db.leaves.find({
         "employee_id": employee_id,
         "$expr": {
             "$and": [
-                {"$eq": [{"$year": {"$toDate": "$start_date"}}, int(year)]},
-                {"$eq": [{"$month": {"$toDate": "$start_date"}}, int(month_num)]}
+                {"$eq": [{"$year": {"$toDate": "$start_date"}}, year_int]},
+                {"$eq": [{"$month": {"$toDate": "$start_date"}}, month_int]}
             ]
         }
     }, {"_id": 0}).to_list(1000)
@@ -1480,13 +1486,12 @@ async def get_employee_payroll_report(
     total_leave_days = sum(l['days_count'] for l in approved_leaves)
     unpaid_days = sum(l['days_count'] for l in unpaid_leaves)
     
-    working_days_in_month = 22
-    actual_working_days = working_days_in_month - total_leave_days
+    actual_working_days = total_days_in_month - unpaid_days
     
     salary_data = None
     if employee.get('monthly_salary'):
         base_salary = employee['monthly_salary']
-        per_day_salary = base_salary / working_days_in_month
+        per_day_salary = base_salary / total_days_in_month
         unpaid_deduction = unpaid_days * per_day_salary
         net_salary = base_salary - unpaid_deduction
         
@@ -1507,10 +1512,10 @@ async def get_employee_payroll_report(
         },
         "month": month,
         "attendance": {
-            "working_days_in_month": working_days_in_month,
+            "total_days_in_month": total_days_in_month,
             "leave_days": total_leave_days,
             "unpaid_days": unpaid_days,
-            "actual_working_days": actual_working_days
+            "payable_days": actual_working_days
         },
         "leaves": approved_leaves,
         "salary": salary_data
