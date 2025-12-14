@@ -2475,13 +2475,15 @@ NODE_ENV=production
         with open(frontend_env_file, 'w') as f:
             f.write(frontend_env_content)
         
-        # 8. Mark setup as completed
+        # 9. Mark setup as completed
         mark_setup_completed()
         
         return {
             "success": True,
-            "message": "Setup completed successfully! Please restart the backend server.",
-            "admin_email": admin_config.email
+            "message": "Setup completed successfully! Please restart both backend and frontend servers.",
+            "admin_email": admin_config.email,
+            "frontend_url": f"http://{server_config.server_ip}:{server_config.frontend_port}",
+            "backend_url": f"http://{server_config.server_ip}:{server_config.backend_port}"
         }
         
     except Exception as e:
