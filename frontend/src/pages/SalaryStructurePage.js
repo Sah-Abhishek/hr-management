@@ -249,6 +249,21 @@ const SalaryStructurePage = () => {
           <p className="text-slate-600">Configure detailed salary components for employees</p>
         </div>
 
+        {/* Info Banner */}
+        <div className="mb-6 bg-blue-50 border border-blue-100 rounded-lg p-4">
+          <div className="flex gap-3 items-start">
+            <div className="text-blue-600 text-xl">ℹ️</div>
+            <div className="text-sm text-blue-900">
+              <p className="font-semibold mb-1">About Salary Components</p>
+              <p>
+                When you select an employee for the first time, the system automatically loads the 
+                <strong> Salary Template</strong> (defined in Settings → Salary Template). 
+                You can then customize the amounts for each component specific to this employee.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Configuration Panel */}
           <Card className="lg:col-span-2 border-slate-100 shadow-sm">
