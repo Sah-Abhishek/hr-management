@@ -1274,7 +1274,9 @@ async def save_salary_template(
     }
     
     await db.salary_templates.delete_many({})
-    await db.salary_templates.insert_one(template_data)
+    # Create a copy for insertion to avoid ObjectId contamination
+    insert_data = template_data.copy()
+    await db.salary_templates.insert_one(insert_data)
     
     return {"status": "success", "template": template_data}
 
