@@ -12,7 +12,7 @@ import Papa from 'papaparse';
 
 const PayrollPage = () => {
   const [employees, setEmployees] = useState([]);
-  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(false);
