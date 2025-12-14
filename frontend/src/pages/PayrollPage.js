@@ -76,7 +76,8 @@ const PayrollPage = () => {
       'Department': emp.department,
       'Designation': emp.designation,
       'Base Salary': emp.base_salary,
-      'Working Days': emp.working_days,
+      'Total Days in Month': emp.total_days_in_month,
+      'Payable Days': emp.payable_days,
       'Leave Days': emp.leave_days,
       'Unpaid Days': emp.unpaid_days,
       'Unpaid Deduction': emp.unpaid_deduction.toFixed(2),
@@ -241,8 +242,8 @@ const PayrollPage = () => {
                             <div className="font-medium">₹{emp.base_salary.toLocaleString()}</div>
                           </div>
                           <div>
-                            <div className="text-slate-500 text-xs">Days Worked</div>
-                            <div className="font-medium text-blue-600">{emp.working_days}</div>
+                            <div className="text-slate-500 text-xs">Payable Days</div>
+                            <div className="font-medium text-blue-600">{emp.payable_days}</div>
                           </div>
                           <div>
                             <div className="text-slate-500 text-xs">Unpaid Days</div>
