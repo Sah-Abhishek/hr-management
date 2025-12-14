@@ -53,23 +53,87 @@ const SalaryStructurePage = () => {
     try {
       const response = await api.get(`/salary-structure/${empId}`);
       if (response.data) {
+        // Employee already has a saved structure
         setSalaryStructure({
           basic_salary: response.data.basic_salary || 0,
           components: response.data.components || []
         });
       } else {
+        // No saved structure - initialize with template
         const employee = employees.find(e => e.id === empId);
+        const basicSalary = employee?.monthly_salary || 0;
+        
+        // Create components from template
+        let initialComponents = [];
+        if (salaryTemplate) {
+          // Add earnings from template
+          if (salaryTemplate.earnings) {
+            initialComponents = initialComponents.concat(
+              salaryTemplate.earnings.map(earning => ({
+                name: earning.name,
+                amount: 0,
+                type: 'earning',
+                is_percentage: false,
+                calculation_base: 'basic'
+              }))
+            );
+          }
+          
+          // Add deductions from template
+          if (salaryTemplate.deductions) {
+            initialComponents = initialComponents.concat(
+              salaryTemplate.deductions.map(deduction => ({
+                name: deduction.name,
+                amount: 0,
+                type: 'deduction',
+                is_percentage: false,
+                calculation_base: 'basic'
+              }))
+            );
+          }
+        }
+        
         setSalaryStructure({
-          basic_salary: employee?.monthly_salary || 0,
-          components: []
+          basic_salary: basicSalary,
+          components: initialComponents
         });
       }
     } catch (error) {
       console.error(error);
+      // On error, still try to initialize with template
       const employee = employees.find(e => e.id === empId);
+      const basicSalary = employee?.monthly_salary || 0;
+      
+      let initialComponents = [];
+      if (salaryTemplate) {
+        if (salaryTemplate.earnings) {
+          initialComponents = initialComponents.concat(
+            salaryTemplate.earnings.map(earning => ({
+              name: earning.name,
+              amount: 0,
+              type: 'earning',
+              is_percentage: false,
+              calculation_base: 'basic'
+            }))
+          );
+        }
+        
+        if (salaryTemplate.deductions) {
+          initialComponents = initialComponents.concat(
+            salaryTemplate.deductions.map(deduction => ({
+              name: deduction.name,
+              amount: 0,
+              type: 'deduction',
+              is_percentage: false,
+              calculation_base: 'basic'
+            }))
+          );
+        }
+      }
+      
       setSalaryStructure({
-        basic_salary: employee?.monthly_salary || 0,
-        components: []
+        basic_salary: basicSalary,
+        components: initialComponents
       });
     } finally {
       setLoading(false);
