@@ -60,6 +60,7 @@ function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="payroll" element={<PayrollPage />} />
             <Route path="salary-structure" element={<SalaryStructurePage />} />
+            <Route path="salary-template" element={<SalaryTemplatePage />} />
             <Route path="hierarchy" element={<HierarchyPage />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>
