@@ -91,7 +91,7 @@ const EmployeesPage = () => {
         ...employeeForm,
         role: 'employee', // Default role
         designation: 'Employee', // Default designation
-        organization_id: employeeForm.organization_id || null,
+        organization_id: (employeeForm.organization_id && employeeForm.organization_id !== 'none') ? employeeForm.organization_id : null,
         manager_email: employeeForm.manager_email === 'none' ? '' : employeeForm.manager_email
       });
       toast.success('Employee added successfully!');
@@ -143,7 +143,7 @@ const EmployeesPage = () => {
         designation: selectedEmployee.designation,
         phone: selectedEmployee.phone,
         monthly_salary: selectedEmployee.monthly_salary || null,
-        organization_id: selectedEmployee.organization_id || null,
+        organization_id: (selectedEmployee.organization_id && selectedEmployee.organization_id !== 'none') ? selectedEmployee.organization_id : null,
         manager_email: selectedEmployee.manager_email === 'none' ? '' : selectedEmployee.manager_email,
         employee_id: selectedEmployee.employee_id,
       });
@@ -379,7 +379,7 @@ const EmployeesPage = () => {
                     <SelectValue placeholder="Select organization (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {organizations.map(org => (
                       <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
                     ))}
