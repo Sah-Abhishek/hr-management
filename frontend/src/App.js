@@ -21,6 +21,7 @@ import CompOffPage from '@/pages/CompOffPage';
 import OrganizationsPage from '@/pages/OrganizationsPage';
 import ReportsPage from '@/pages/ReportsPage';
 import PayrollPage from '@/pages/PayrollPage';
+import SalaryStructurePage from '@/pages/SalaryStructurePage';
 import Layout from '@/components/Layout';
 
 const ProtectedRoute = ({ children }) => {
@@ -57,6 +58,7 @@ function App() {
             <Route path="organizations" element={<OrganizationsPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="payroll" element={<PayrollPage />} />
+            <Route path="salary-structure" element={<SalaryStructurePage />} />
             <Route path="hierarchy" element={<HierarchyPage />} />
             <Route path="profile" element={<ProfilePage />} />
           </Route>

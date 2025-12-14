@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Users, FileText, CheckSquare, User, LogOut, Menu, X, Settings, Bell, Network, ClipboardList, Wallet, Gift, Building2, BarChart3, DollarSign } from 'lucide-react';
+import { Home, Users, FileText, CheckSquare, User, LogOut, Menu, X, Settings, Bell, Network, ClipboardList, Wallet, Gift, Building2, BarChart3, DollarSign, Calculator } from 'lucide-react';
 import { clearAuth, getAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
@@ -42,6 +42,7 @@ const Layout = () => {
     { name: 'Organizations', href: '/organizations', icon: Building2, roles: ['admin'] },
     { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager'] },
     { name: 'Payroll', href: '/payroll', icon: DollarSign, roles: ['admin'] },
+    { name: 'Salary Structure', href: '/salary-structure', icon: Calculator, roles: ['admin'] },
     { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
     { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['admin'] },
     { name: 'Profile', href: '/profile', icon: User, roles: ['admin', 'manager', 'employee'] },
