@@ -372,7 +372,7 @@ const EmployeesPage = () => {
               <div>
                 <Label htmlFor="edit-emp-organization">Organization</Label>
                 <Select
-                  value={selectedEmployee.organization_id || ''}
+                  value={selectedEmployee.organization_id || 'none'}
                   onValueChange={(value) => setSelectedEmployee({ ...selectedEmployee, organization_id: value })}
                 >
                   <SelectTrigger className="mt-1">
