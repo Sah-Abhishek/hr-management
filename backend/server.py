@@ -1344,6 +1344,201 @@ async def get_salary_structure(
 
 # ============= PAYROLL & SALARY ENDPOINTS =============
 
+@api_router.post("/payroll/send-detailed-salary-slip")
+async def send_detailed_salary_slip(
+    data: dict,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Send detailed salary slip with component breakdown"""
+    employee_id = data.get('employee_id')
+    month_year = data.get('month')
+    
+    # Get employee and salary structure
+    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    salary_structure = await db.salary_structures.find_one({"employee_id": employee_id}, {"_id": 0})
+    if not salary_structure:
+        raise HTTPException(status_code=400, detail="Salary structure not configured for this employee")
+    
+    # Parse month
+    year, month_num = month_year.split('-')
+    year_int = int(year)
+    month_int = int(month_num)
+    month_name = datetime(year_int, month_int, 1).strftime('%B %Y')
+    
+    # Calculate total days
+    import calendar
+    total_days_in_month = calendar.monthrange(year_int, month_int)[1]
+    
+    # Get leaves
+    leaves = await db.leaves.find({
+        "employee_id": employee_id,
+        "$expr": {
+            "$and": [
+                {"$eq": [{"$year": {"$toDate": "$start_date"}}, year_int]},
+                {"$eq": [{"$month": {"$toDate": "$start_date"}}, month_int]}
+            ]
+        }
+    }, {"_id": 0}).to_list(1000)
+    
+    approved_leaves = [l for l in leaves if l['status'] == 'approved']
+    unpaid_leaves = [l for l in approved_leaves if l['leave_type'] == 'Unpaid Leave']
+    unpaid_days = sum(l['days_count'] for l in unpaid_leaves)
+    payable_days = total_days_in_month - unpaid_days
+    
+    # Calculate salary with components
+    basic_salary = salary_structure['basic_salary']
+    per_day_basic = basic_salary / total_days_in_month
+    basic_deduction = unpaid_days * per_day_basic
+    payable_basic = basic_salary - basic_deduction
+    
+    # Calculate components
+    earnings_html = f'<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">Basic Salary</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">₹{payable_basic:,.2f}</td></tr>'
+    total_earnings = payable_basic
+    
+    for comp in salary_structure.get('components', []):
+        if comp['type'] == 'earning':
+            if comp['is_percentage'] and comp['calculation_base'] == 'basic':
+                comp_amount = (payable_basic * comp['amount']) / 100
+            else:
+                # Prorate for unpaid days
+                comp_amount = comp.get('calculated_amount', comp['amount'])
+                per_day = comp_amount / total_days_in_month
+                comp_amount = comp_amount - (per_day * unpaid_days)
+            
+            total_earnings += comp_amount
+            earnings_html += f'<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">{comp["name"]}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">₹{comp_amount:,.2f}</td></tr>'
+    
+    deductions_html = ''
+    total_deductions = 0
+    
+    for comp in salary_structure.get('components', []):
+        if comp['type'] == 'deduction':
+            if comp['is_percentage'] and comp['calculation_base'] == 'basic':
+                comp_amount = (payable_basic * comp['amount']) / 100
+            elif comp['is_percentage'] and comp['calculation_base'] == 'gross':
+                comp_amount = (total_earnings * comp['amount']) / 100
+            else:
+                comp_amount = comp.get('calculated_amount', comp['amount'])
+            
+            total_deductions += comp_amount
+            deductions_html += f'<tr><td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">{comp["name"]}</td><td style="padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: right;">₹{comp_amount:,.2f}</td></tr>'
+    
+    gross_salary = total_earnings
+    net_salary = gross_salary - total_deductions
+    
+    # Generate email HTML
+    email_html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px; text-align: center;">SALARY SLIP</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; text-align: center;">{month_name}</p>
+        </div>
+        
+        <div style="background: white; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
+            <!-- Employee Details -->
+            <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 10px; background: #f8fafc; font-weight: 600; width: 30%;">Employee Name:</td>
+                    <td style="padding: 10px; background: #f8fafc;">{employee['full_name']}</td>
+                    <td style="padding: 10px; background: #f8fafc; font-weight: 600; width: 30%;">Employee ID:</td>
+                    <td style="padding: 10px; background: #f8fafc;">{employee.get('id', 'N/A')}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; font-weight: 600;">Department:</td>
+                    <td style="padding: 10px;">{employee['department']}</td>
+                    <td style="padding: 10px; font-weight: 600;">Designation:</td>
+                    <td style="padding: 10px;">{employee['designation']}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; background: #f8fafc; font-weight: 600;">Pay Period:</td>
+                    <td style="padding: 10px; background: #f8fafc;">{month_name}</td>
+                    <td style="padding: 10px; background: #f8fafc; font-weight: 600;">Payable Days:</td>
+                    <td style="padding: 10px; background: #f8fafc;">{payable_days} / {total_days_in_month}</td>
+                </tr>
+            </table>
+            
+            <!-- Salary Breakdown -->
+            <div style="margin: 30px 0;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 50%; vertical-align: top; padding-right: 10px;">
+                            <!-- Earnings -->
+                            <div style="border: 2px solid #10b981; border-radius: 8px; overflow: hidden;">
+                                <div style="background: #10b981; color: white; padding: 12px; font-weight: 600; font-size: 16px;">
+                                    EARNINGS
+                                </div>
+                                <table style="width: 100%;">
+                                    {earnings_html}
+                                    <tr style="background: #dcfce7;">
+                                        <td style="padding: 12px; font-weight: 700; font-size: 16px;">Gross Earnings</td>
+                                        <td style="padding: 12px; text-align: right; font-weight: 700; font-size: 16px;">₹{gross_salary:,.2f}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                        <td style="width: 50%; vertical-align: top; padding-left: 10px;">
+                            <!-- Deductions -->
+                            <div style="border: 2px solid #ef4444; border-radius: 8px; overflow: hidden;">
+                                <div style="background: #ef4444; color: white; padding: 12px; font-weight: 600; font-size: 16px;">
+                                    DEDUCTIONS
+                                </div>
+                                <table style="width: 100%;">
+                                    {deductions_html if deductions_html else '<tr><td style="padding: 20px; text-align: center; color: #64748b;">No deductions</td></tr>'}
+                                    <tr style="background: #fee2e2;">
+                                        <td style="padding: 12px; font-weight: 700; font-size: 16px;">Total Deductions</td>
+                                        <td style="padding: 12px; text-align: right; font-weight: 700; font-size: 16px;">₹{total_deductions:,.2f}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Net Salary -->
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0;">
+                <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 14px;">NET SALARY (Gross - Deductions)</p>
+                <h1 style="color: white; margin: 10px 0 0 0; font-size: 42px; font-weight: 700;">₹{net_salary:,.2f}</h1>
+            </div>
+            
+            <div style="text-align: center; padding: 20px; border-top: 2px solid #e2e8f0; margin-top: 30px;">
+                <p style="color: #64748b; font-size: 12px; margin: 0;">
+                    This is a system-generated salary slip. For queries, contact HR.
+                </p>
+                <p style="color: #94a3b8; font-size: 11px; margin: 10px 0 0 0;">
+                    Generated on {datetime.now().strftime('%d %B %Y at %I:%M %p')}
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    try:
+        await send_email_notification(
+            to_email=employee['email'],
+            subject=f"Salary Slip - {month_name}",
+            html_content=email_html
+        )
+        
+        return {
+            "status": "success",
+            "message": f"Detailed salary slip sent to {employee['full_name']}",
+            "details": {
+                "gross_salary": gross_salary,
+                "total_deductions": total_deductions,
+                "net_salary": net_salary,
+                "payable_days": payable_days
+            }
+        }
+    except Exception as e:
+        logger.error(f"Failed to send salary slip: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to send salary slip")
+
 @api_router.post("/payroll/send-salary-slip")
 async def send_salary_slip(
     data: dict,
