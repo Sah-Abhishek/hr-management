@@ -21,6 +21,14 @@ const SetupPage = ({ onSetupComplete }) => {
     pem_certificate: ''
   });
 
+  // Server configuration
+  const [serverConfig, setServerConfig] = useState({
+    server_ip: '103.142.175.170',
+    backend_port: '9001',
+    frontend_port: '9000',
+    jwt_secret: ''
+  });
+
   // Admin configuration
   const [adminConfig, setAdminConfig] = useState({
     name: '',
@@ -28,6 +36,16 @@ const SetupPage = ({ onSetupComplete }) => {
     password: '',
     confirmPassword: ''
   });
+
+  // Generate random JWT secret on mount
+  React.useEffect(() => {
+    const generateSecret = () => {
+      const array = new Uint8Array(32);
+      window.crypto.getRandomValues(array);
+      return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    };
+    setServerConfig(prev => ({ ...prev, jwt_secret: generateSecret() }));
+  }, []);
 
   const [testResult, setTestResult] = useState(null);
 
