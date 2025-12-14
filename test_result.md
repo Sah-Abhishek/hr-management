@@ -101,3 +101,67 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Test the newly implemented Salary Template endpoints"
+
+backend:
+  - task: "Salary Template GET Endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "GET /api/salary-template endpoint tested successfully. Returns default template with 6 earnings (Basic, Dearness Allowance, House Rent Allowance, Conveyance Allowance, Medical Allowance, Special Allowance) and 3 deductions (Professional Tax, TDS, EPF) when no custom template exists. Properly handles both default and custom template scenarios."
+        
+  - task: "Salary Template POST Endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "Initial test failed with 500 error due to MongoDB ObjectId serialization issue in FastAPI response"
+        - working: true
+          agent: "testing"
+          comment: "Fixed ObjectId serialization issue by creating a copy of template_data before MongoDB insertion. POST /api/salary-template now works correctly, saves custom templates with proper metadata (updated_at, updated_by), and returns success response with template data."
+
+  - task: "Salary Template Authorization"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Authorization working correctly. Admin users can save templates (POST), all authenticated users can read templates (GET). Employee users correctly receive 403 Forbidden when attempting to save templates."
+
+frontend:
+  # No frontend testing performed as per instructions
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Salary Template GET Endpoint"
+    - "Salary Template POST Endpoint"
+    - "Salary Template Authorization"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "testing"
+      message: "Completed comprehensive testing of salary template endpoints. All three scenarios from review request tested successfully: 1) Get default template (6 earnings, 3 deductions), 2) Save custom template with proper validation, 3) Retrieve updated template. Fixed critical ObjectId serialization bug in POST endpoint. Authorization working correctly with admin-only write access and authenticated read access."
