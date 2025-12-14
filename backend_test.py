@@ -582,6 +582,10 @@ class HRMSAPITester:
         print("\n👤 Testing Profile Management...")
         self.test_profile_management()
         
+        # Test salary template endpoints
+        print("\n💰 Testing Salary Template Management...")
+        self.test_salary_template_endpoints()
+        
         # Print summary
         print(f"\n📊 Test Summary:")
         print(f"Tests Run: {self.tests_run}")
