@@ -1257,6 +1257,55 @@ async def get_comp_off_records(
     records = await db.comp_off_records.find({}, {"_id": 0}).to_list(1000)
     return records
 
+# ============= SALARY TEMPLATE ENDPOINTS =============
+
+@api_router.post("/salary-template")
+async def save_salary_template(
+    template: dict,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Save the standard salary template for all employees"""
+    template_data = {
+        "id": "default_template",
+        "earnings": template.get('earnings', []),
+        "deductions": template.get('deductions', []),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_by": current_user.email
+    }
+    
+    await db.salary_templates.delete_many({})
+    await db.salary_templates.insert_one(template_data)
+    
+    return {"status": "success", "template": template_data}
+
+@api_router.get("/salary-template")
+async def get_salary_template(
+    current_user: User = Depends(get_current_user)
+):
+    """Get the standard salary template"""
+    template = await db.salary_templates.find_one({"id": "default_template"}, {"_id": 0})
+    
+    if not template:
+        # Return default template matching the image
+        return {
+            "id": "default_template",
+            "earnings": [
+                {"name": "Basic", "order": 1},
+                {"name": "Dearness Allowance", "order": 2},
+                {"name": "House Rent Allowance", "order": 3},
+                {"name": "Conveyance Allowance", "order": 4},
+                {"name": "Medical Allowance", "order": 5},
+                {"name": "Special Allowance", "order": 6}
+            ],
+            "deductions": [
+                {"name": "Professional Tax", "order": 1},
+                {"name": "TDS", "order": 2},
+                {"name": "EPF", "order": 3}
+            ]
+        }
+    
+    return template
+
 # ============= SALARY STRUCTURE ENDPOINTS =============
 
 @api_router.post("/salary-structure/{employee_id}")
