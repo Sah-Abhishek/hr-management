@@ -43,6 +43,7 @@ const Layout = () => {
     { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager'] },
     { name: 'Payroll', href: '/payroll', icon: DollarSign, roles: ['admin'] },
     { name: 'Salary Structure', href: '/salary-structure', icon: Calculator, roles: ['admin'] },
+    { name: 'Salary Template', href: '/salary-template', icon: LayoutIcon, roles: ['admin'] },
     { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
     { name: 'Notifications', href: '/notifications', icon: Bell, roles: ['admin'] },
     { name: 'Profile', href: '/profile', icon: User, roles: ['admin', 'manager', 'employee'] },
