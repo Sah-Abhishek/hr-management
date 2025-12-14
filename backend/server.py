@@ -2326,7 +2326,7 @@ async def test_database_connection(config: SetupDBConfig):
         }
 
 @app.post("/api/setup/configure")
-async def configure_setup(db_config: SetupDBConfig, admin_config: SetupAdminConfig):
+async def configure_setup(db_config: SetupDBConfig, server_config: SetupServerConfig, admin_config: SetupAdminConfig):
     """Complete setup: configure database and create admin user"""
     global client, db
     
