@@ -1257,6 +1257,91 @@ async def get_comp_off_records(
     records = await db.comp_off_records.find({}, {"_id": 0}).to_list(1000)
     return records
 
+# ============= SALARY STRUCTURE ENDPOINTS =============
+
+@api_router.post("/salary-structure/{employee_id}")
+async def save_salary_structure(
+    employee_id: str,
+    structure: dict,
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
+):
+    """Save salary structure for an employee"""
+    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    salary_data = {
+        "employee_id": employee_id,
+        "basic_salary": structure.get('basic_salary', 0),
+        "components": structure.get('components', []),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Calculate total salary
+    basic = salary_data['basic_salary']
+    total_earnings = basic
+    total_deductions = 0
+    
+    for comp in salary_data['components']:
+        if comp['is_percentage']:
+            if comp['calculation_base'] == 'basic':
+                comp['calculated_amount'] = (basic * comp['amount']) / 100
+            else:
+                comp['calculated_amount'] = comp['amount']
+        else:
+            comp['calculated_amount'] = comp['amount']
+        
+        if comp['type'] == 'earning':
+            total_earnings += comp['calculated_amount']
+        else:
+            total_deductions += comp['calculated_amount']
+    
+    salary_data['gross_salary'] = total_earnings
+    salary_data['total_deductions'] = total_deductions
+    salary_data['net_salary'] = total_earnings - total_deductions
+    
+    # Update or insert
+    await db.salary_structures.delete_many({"employee_id": employee_id})
+    await db.salary_structures.insert_one(salary_data)
+    
+    # Update employee's monthly_salary
+    await db.employees.update_one(
+        {"id": employee_id},
+        {"$set": {"monthly_salary": salary_data['net_salary']}}
+    )
+    
+    return {"status": "success", "structure": salary_data}
+
+@api_router.get("/salary-structure/{employee_id}")
+async def get_salary_structure(
+    employee_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get salary structure for an employee"""
+    # Check permissions
+    if current_user.role not in ['admin', 'manager']:
+        employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+        if not employee or employee['email'] != current_user.email:
+            raise HTTPException(status_code=403, detail="Not authorized")
+    
+    structure = await db.salary_structures.find_one({"employee_id": employee_id}, {"_id": 0})
+    
+    if not structure:
+        # Return default structure
+        employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+        if employee and employee.get('monthly_salary'):
+            return {
+                "employee_id": employee_id,
+                "basic_salary": employee['monthly_salary'],
+                "components": [],
+                "gross_salary": employee['monthly_salary'],
+                "total_deductions": 0,
+                "net_salary": employee['monthly_salary']
+            }
+        return None
+    
+    return structure
+
 # ============= PAYROLL & SALARY ENDPOINTS =============
 
 @api_router.post("/payroll/send-salary-slip")
