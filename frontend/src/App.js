@@ -35,6 +35,56 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
+  const [setupCompleted, setSetupCompleted] = useState(null); // null = checking, true/false = result
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    checkSetupStatus();
+  }, []);
+
+  const checkSetupStatus = async () => {
+    try {
+      const response = await api.get('/setup/status');
+      setSetupCompleted(response.data.setup_completed);
+    } catch (error) {
+      console.error('Failed to check setup status:', error);
+      setSetupCompleted(false);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const handleSetupComplete = () => {
+    alert('Setup completed! Please restart the backend server (PM2) for changes to take effect.\n\nRun: pm2 restart hrms-backend');
+    setSetupCompleted(true);
+    // Reload the page after a delay
+    setTimeout(() => {
+      window.location.reload();
+    }, 3000);
+  };
+
+  // Show loading while checking setup status
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show setup page if setup is not completed
+  if (!setupCompleted) {
+    return (
+      <>
+        <SetupPage onSetupComplete={handleSetupComplete} />
+        <Toaster position="top-right" />
+      </>
+    );
+  }
+
   return (
     <div className="App">
       <BrowserRouter>
