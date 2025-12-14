@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import '@/App.css';
 import { isAuthenticated } from '@/lib/auth';
+import api from '@/lib/api';
 
 // Pages
 import LoginPage from '@/pages/LoginPage';
