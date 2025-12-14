@@ -336,8 +336,134 @@ const SetupPage = ({ onSetupComplete }) => {
           </Card>
         )}
 
-        {/* Step 2: Admin Account */}
+        {/* Step 2: Server Configuration */}
         {step === 2 && (
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+                Server Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure your server settings and URLs
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="server_ip">Server IP Address / Domain *</Label>
+                <Input
+                  id="server_ip"
+                  placeholder="103.142.175.170 or yourdomain.com"
+                  value={serverConfig.server_ip}
+                  onChange={(e) => setServerConfig({ ...serverConfig, server_ip: e.target.value })}
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  The public IP address or domain where your HRMS will be accessible
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="backend_port">Backend Port *</Label>
+                  <Input
+                    id="backend_port"
+                    placeholder="9001"
+                    value={serverConfig.backend_port}
+                    onChange={(e) => setServerConfig({ ...serverConfig, backend_port: e.target.value })}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    API server port
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="frontend_port">Frontend Port *</Label>
+                  <Input
+                    id="frontend_port"
+                    placeholder="9000"
+                    value={serverConfig.frontend_port}
+                    onChange={(e) => setServerConfig({ ...serverConfig, frontend_port: e.target.value })}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Web app port
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="jwt_secret">JWT Secret Key *</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="jwt_secret"
+                    type="text"
+                    value={serverConfig.jwt_secret}
+                    onChange={(e) => setServerConfig({ ...serverConfig, jwt_secret: e.target.value })}
+                    className="font-mono text-xs"
+                    readOnly
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const array = new Uint8Array(32);
+                      window.crypto.getRandomValues(array);
+                      const secret = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+                      setServerConfig({ ...serverConfig, jwt_secret: secret });
+                      toast.success('New secret generated');
+                    }}
+                  >
+                    Regenerate
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Secure key for JWT token encryption (auto-generated)
+                </p>
+              </div>
+
+              <Alert className="border-blue-200 bg-blue-50">
+                <AlertCircle className="w-4 h-4 text-blue-600" />
+                <AlertDescription className="text-blue-800 text-sm">
+                  <strong>Auto-Configuration:</strong> These settings will automatically configure your 
+                  backend and frontend .env files. No manual editing required!
+                </AlertDescription>
+              </Alert>
+
+              <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                <p className="text-sm font-medium text-gray-700 mb-2">Preview URLs:</p>
+                <div className="space-y-1 text-xs text-gray-600 font-mono">
+                  <div>Frontend: <span className="text-blue-600">http://{serverConfig.server_ip}:{serverConfig.frontend_port}</span></div>
+                  <div>Backend: <span className="text-blue-600">http://{serverConfig.server_ip}:{serverConfig.backend_port}</span></div>
+                  <div>API Docs: <span className="text-blue-600">http://{serverConfig.server_ip}:{serverConfig.backend_port}/docs</span></div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={() => setStep(1)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  ← Back
+                </Button>
+                
+                <Button
+                  onClick={handleNextStep}
+                  className="flex-1"
+                >
+                  Next: Admin Account →
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Admin Account */}
+        {step === 3 && (
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
