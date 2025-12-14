@@ -159,6 +159,7 @@ const SetupPage = ({ onSetupComplete }) => {
     try {
       const response = await api.post('/setup/configure', {
         db_config: dbConfig,
+        server_config: serverConfig,
         admin_config: {
           name: adminConfig.name,
           email: adminConfig.email,
