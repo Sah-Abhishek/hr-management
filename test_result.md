@@ -249,9 +249,14 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Salary Template GET Endpoint"
-    - "Salary Template POST Endpoint"
-    - "Salary Template Authorization"
+    - "Salary Template Page Load"
+    - "Add New Earning Component"
+    - "Remove Earning Component"
+    - "Reorder Components"
+    - "Save Template"
+    - "SelectItem Bug Fix - Add Employee Form"
+    - "SelectItem Bug Fix - Edit Employee Form"
+    - "SelectItem Bug Fix - Payroll Page"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
