@@ -30,7 +30,7 @@ module.exports = {
     {
       name: 'hrms-frontend',
       script: 'serve',
-      args: '-s build -l 9000 --single',
+      args: ['-s', 'build', '-l', '9000', '--single'],
       cwd: './frontend',
       instances: 1,
       exec_mode: 'fork',
