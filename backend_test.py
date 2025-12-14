@@ -169,6 +169,27 @@ class HRMSAPITester:
             # Update token in case it changed
             self.admin_token = response['access_token']
 
+    def test_existing_admin_login(self):
+        """Test login with existing admin credentials"""
+        login_data = {
+            "email": "test.admin@example.com",
+            "password": "password123"
+        }
+        
+        success, response = self.run_test(
+            "Existing Admin Login",
+            "POST",
+            "auth/login",
+            200,
+            data=login_data
+        )
+        
+        if success and 'access_token' in response:
+            self.admin_token = response['access_token']
+            self.admin_user = response['user']
+            return True
+        return False
+
     def test_get_current_user(self):
         """Test getting current user profile"""
         if not self.admin_token:
