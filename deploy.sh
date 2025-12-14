@@ -58,7 +58,7 @@ cd frontend
 
 # Install Node dependencies
 echo "Installing Node dependencies..."
-yarn install --frozen-lockfile
+yarn install
 
 # Build frontend for production
 echo "Building frontend for production..."
