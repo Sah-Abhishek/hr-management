@@ -16,6 +16,7 @@ const SalaryStructurePage = () => {
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [salaryTemplate, setSalaryTemplate] = useState(null);
   
   const [salaryStructure, setSalaryStructure] = useState({
     basic_salary: 0,
@@ -24,7 +25,17 @@ const SalaryStructurePage = () => {
 
   useEffect(() => {
     fetchEmployees();
+    fetchSalaryTemplate();
   }, []);
+
+  const fetchSalaryTemplate = async () => {
+    try {
+      const response = await api.get('/salary-template');
+      setSalaryTemplate(response.data);
+    } catch (error) {
+      console.error('Failed to load salary template:', error);
+    }
+  };
 
   const fetchEmployees = async () => {
     try {
