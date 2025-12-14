@@ -24,6 +24,7 @@ import ReportsPage from '@/pages/ReportsPage';
 import PayrollPage from '@/pages/PayrollPage';
 import SalaryStructurePage from '@/pages/SalaryStructurePage';
 import SalaryTemplatePage from '@/pages/SalaryTemplatePage';
+import SetupPage from '@/pages/SetupPage';
 import Layout from '@/components/Layout';
 
 const ProtectedRoute = ({ children }) => {
