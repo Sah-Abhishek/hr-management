@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-12-14T00:46:19.030723",
+  "timestamp": "2025-12-14T00:47:53.283985",
   "total_tests": 16,
   "passed_tests": 13,
   "failed_tests": 3,
@@ -57,23 +57,23 @@
     },
     {
       "test": "Default Template Structure Validation",
-      "success": true,
-      "details": ""
-    },
-    {
-      "test": "Default Earnings Validation",
-      "success": true,
-      "details": ""
-    },
-    {
-      "test": "Default Deductions Validation",
-      "success": true,
-      "details": ""
+      "success": false,
+      "details": "Expected 6 earnings and 3 deductions, got 3 earnings and 2 deductions"
     },
     {
       "test": "Save Custom Salary Template",
-      "success": false,
-      "details": "Expected 200, got 500"
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Custom Template Save Response",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Custom Template Metadata Validation",
+      "success": true,
+      "details": ""
     },
     {
       "test": "Get Updated Salary Template",
