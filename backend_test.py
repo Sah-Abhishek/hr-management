@@ -410,6 +410,151 @@ class HRMSAPITester:
                 token=self.employee_token
             )
 
+    def test_salary_template_endpoints(self):
+        """Test salary template endpoints"""
+        if not self.admin_token:
+            self.log_test("Salary Template Tests", False, "No admin token available")
+            return
+            
+        print("\n💰 Testing Salary Template Endpoints...")
+        
+        # Scenario 1: Get Default Template (first time)
+        print("\n📋 Scenario 1: Get Default Template (first time)")
+        success, template = self.run_test(
+            "Get Default Salary Template",
+            "GET",
+            "salary-template",
+            200,
+            token=self.admin_token
+        )
+        
+        if success:
+            # Verify default template structure
+            if 'earnings' in template and 'deductions' in template:
+                earnings_count = len(template['earnings'])
+                deductions_count = len(template['deductions'])
+                
+                if earnings_count == 6 and deductions_count == 3:
+                    self.log_test("Default Template Structure Validation", True)
+                    
+                    # Verify specific earnings
+                    expected_earnings = ["Basic", "Dearness Allowance", "House Rent Allowance", 
+                                       "Conveyance Allowance", "Medical Allowance", "Special Allowance"]
+                    actual_earnings = [e['name'] for e in template['earnings']]
+                    
+                    if all(earning in actual_earnings for earning in expected_earnings):
+                        self.log_test("Default Earnings Validation", True)
+                    else:
+                        self.log_test("Default Earnings Validation", False, 
+                                    f"Expected {expected_earnings}, got {actual_earnings}")
+                    
+                    # Verify specific deductions
+                    expected_deductions = ["Professional Tax", "TDS", "EPF"]
+                    actual_deductions = [d['name'] for d in template['deductions']]
+                    
+                    if all(deduction in actual_deductions for deduction in expected_deductions):
+                        self.log_test("Default Deductions Validation", True)
+                    else:
+                        self.log_test("Default Deductions Validation", False,
+                                    f"Expected {expected_deductions}, got {actual_deductions}")
+                else:
+                    self.log_test("Default Template Structure Validation", False,
+                                f"Expected 6 earnings and 3 deductions, got {earnings_count} earnings and {deductions_count} deductions")
+            else:
+                self.log_test("Default Template Structure Validation", False, "Missing earnings or deductions in response")
+        
+        # Scenario 2: Save Custom Template
+        print("\n📝 Scenario 2: Save Custom Template")
+        custom_template = {
+            "earnings": [
+                {"name": "Basic Salary", "order": 1},
+                {"name": "HRA", "order": 2},
+                {"name": "Transport Allowance", "order": 3}
+            ],
+            "deductions": [
+                {"name": "Professional Tax", "order": 1},
+                {"name": "Insurance", "order": 2}
+            ]
+        }
+        
+        success, response = self.run_test(
+            "Save Custom Salary Template",
+            "POST",
+            "salary-template",
+            200,
+            data=custom_template,
+            token=self.admin_token
+        )
+        
+        if success:
+            # Verify response structure
+            if 'status' in response and response['status'] == 'success':
+                self.log_test("Custom Template Save Response", True)
+                
+                # Verify template data in response
+                if 'template' in response:
+                    saved_template = response['template']
+                    if ('updated_at' in saved_template and 'updated_by' in saved_template and 
+                        'earnings' in saved_template and 'deductions' in saved_template):
+                        self.log_test("Custom Template Metadata Validation", True)
+                    else:
+                        self.log_test("Custom Template Metadata Validation", False, 
+                                    "Missing updated_at, updated_by, earnings, or deductions in saved template")
+                else:
+                    self.log_test("Custom Template Save Response", False, "Missing template in response")
+            else:
+                self.log_test("Custom Template Save Response", False, "Invalid status in response")
+        
+        # Scenario 3: Get Updated Template
+        print("\n🔄 Scenario 3: Get Updated Template")
+        success, updated_template = self.run_test(
+            "Get Updated Salary Template",
+            "GET",
+            "salary-template",
+            200,
+            token=self.admin_token
+        )
+        
+        if success:
+            # Verify the template matches what we saved
+            if 'earnings' in updated_template and 'deductions' in updated_template:
+                earnings_names = [e['name'] for e in updated_template['earnings']]
+                deductions_names = [d['name'] for d in updated_template['deductions']]
+                
+                expected_earnings = ["Basic Salary", "HRA", "Transport Allowance"]
+                expected_deductions = ["Professional Tax", "Insurance"]
+                
+                if (set(earnings_names) == set(expected_earnings) and 
+                    set(deductions_names) == set(expected_deductions)):
+                    self.log_test("Updated Template Content Validation", True)
+                else:
+                    self.log_test("Updated Template Content Validation", False,
+                                f"Template content mismatch. Earnings: {earnings_names}, Deductions: {deductions_names}")
+            else:
+                self.log_test("Updated Template Content Validation", False, "Missing earnings or deductions in updated template")
+        
+        # Test authorization - Employee should not be able to save template
+        if self.employee_token:
+            print("\n🔒 Testing Authorization")
+            self.run_test(
+                "Employee Save Template (Should Fail)",
+                "POST",
+                "salary-template",
+                403,
+                data=custom_template,
+                token=self.employee_token
+            )
+        
+        # Test that any authenticated user can get template
+        if self.employee_token:
+            self.run_test(
+                "Employee Get Template (Should Work)",
+                "GET",
+                "salary-template",
+                200,
+                token=self.employee_token
+            )
+
     def run_all_tests(self):
         """Run all API tests"""
         print("🚀 Starting HRMS API Testing...")
