@@ -30,12 +30,13 @@ module.exports = {
     {
       name: 'hrms-frontend',
       script: 'serve',
-      args: '-s build -l 9000',
+      args: '-s build -l 9000 --single',
       cwd: './frontend',
       instances: 1,
       exec_mode: 'fork',
       watch: false,
       max_memory_restart: '500M',
+      interpreter: 'none',
       env: {
         NODE_ENV: 'production'
       },
