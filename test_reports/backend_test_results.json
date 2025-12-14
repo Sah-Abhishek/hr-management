@@ -1,27 +1,12 @@
 {
-  "timestamp": "2025-12-13T20:37:56.891204",
-  "total_tests": 23,
-  "passed_tests": 23,
-  "failed_tests": 0,
-  "success_rate": 100.0,
+  "timestamp": "2025-12-14T00:46:19.030723",
+  "total_tests": 16,
+  "passed_tests": 13,
+  "failed_tests": 3,
+  "success_rate": 81.25,
   "test_results": [
     {
-      "test": "Admin Registration",
-      "success": true,
-      "details": ""
-    },
-    {
-      "test": "Manager Registration",
-      "success": true,
-      "details": ""
-    },
-    {
-      "test": "Employee Registration",
-      "success": true,
-      "details": ""
-    },
-    {
-      "test": "Admin Login",
+      "test": "Existing Admin Login",
       "success": true,
       "details": ""
     },
@@ -36,27 +21,7 @@
       "details": ""
     },
     {
-      "test": "Dashboard Stats - Manager",
-      "success": true,
-      "details": ""
-    },
-    {
-      "test": "Dashboard Stats - Employee",
-      "success": true,
-      "details": ""
-    },
-    {
       "test": "Get All Employees - Admin",
-      "success": true,
-      "details": ""
-    },
-    {
-      "test": "Get All Employees - Manager",
-      "success": true,
-      "details": ""
-    },
-    {
-      "test": "Get All Employees - Employee (Should Fail)",
       "success": true,
       "details": ""
     },
@@ -76,47 +41,47 @@
       "details": ""
     },
     {
-      "test": "Apply for Leave - Employee",
+      "test": "Leave Management",
+      "success": false,
+      "details": "No employee token available"
+    },
+    {
+      "test": "Profile Management",
+      "success": false,
+      "details": "No employee data available"
+    },
+    {
+      "test": "Get Default Salary Template",
       "success": true,
       "details": ""
     },
     {
-      "test": "Get My Leaves - Employee",
+      "test": "Default Template Structure Validation",
       "success": true,
       "details": ""
     },
     {
-      "test": "Get Pending Leaves - Manager",
+      "test": "Default Earnings Validation",
       "success": true,
       "details": ""
     },
     {
-      "test": "Get Pending Leaves - Admin",
+      "test": "Default Deductions Validation",
       "success": true,
       "details": ""
     },
     {
-      "test": "Get All Leaves - Admin",
+      "test": "Save Custom Salary Template",
+      "success": false,
+      "details": "Expected 200, got 500"
+    },
+    {
+      "test": "Get Updated Salary Template",
       "success": true,
       "details": ""
     },
     {
-      "test": "Manager Approve Leave",
-      "success": true,
-      "details": ""
-    },
-    {
-      "test": "Admin Final Approve Leave",
-      "success": true,
-      "details": ""
-    },
-    {
-      "test": "Get Current Profile",
-      "success": true,
-      "details": ""
-    },
-    {
-      "test": "Update Profile",
+      "test": "Updated Template Content Validation",
       "success": true,
       "details": ""
     }
