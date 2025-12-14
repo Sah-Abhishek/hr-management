@@ -10,6 +10,7 @@ import api from '@/lib/api';
 
 const SetupPage = ({ onSetupComplete }) => {
   const [step, setStep] = useState(1);
+  const [totalSteps] = useState(3);
   const [testing, setTesting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [connectionTested, setConnectionTested] = useState(false);
