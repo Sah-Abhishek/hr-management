@@ -199,16 +199,29 @@ const SetupPage = ({ onSetupComplete }) => {
             <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${step >= 1 ? 'border-blue-600 bg-blue-50' : 'border-gray-300'}`}>
               {step > 1 ? <CheckCircle className="w-6 h-6" /> : <Database className="w-5 h-5" />}
             </div>
-            <span className="ml-2 font-medium">Database</span>
+            <span className="ml-2 font-medium hidden sm:inline">Database</span>
           </div>
           
-          <div className={`w-16 h-1 mx-4 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`} />
+          <div className={`w-12 h-1 mx-2 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`} />
           
           <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
             <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${step >= 2 ? 'border-blue-600 bg-blue-50' : 'border-gray-300'}`}>
+              {step > 2 ? <CheckCircle className="w-6 h-6" /> : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              )}
+            </div>
+            <span className="ml-2 font-medium hidden sm:inline">Server</span>
+          </div>
+
+          <div className={`w-12 h-1 mx-2 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-300'}`} />
+          
+          <div className={`flex items-center ${step >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${step >= 3 ? 'border-blue-600 bg-blue-50' : 'border-gray-300'}`}>
               <User className="w-5 h-5" />
             </div>
-            <span className="ml-2 font-medium">Admin Account</span>
+            <span className="ml-2 font-medium hidden sm:inline">Admin</span>
           </div>
         </div>
 
