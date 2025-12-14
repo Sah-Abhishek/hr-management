@@ -123,6 +123,17 @@ const SetupPage = ({ onSetupComplete }) => {
         return;
       }
       setStep(2);
+    } else if (step === 2) {
+      // Validate server config
+      if (!serverConfig.server_ip) {
+        toast.error('Please enter server IP address');
+        return;
+      }
+      if (!serverConfig.backend_port || !serverConfig.frontend_port) {
+        toast.error('Please enter backend and frontend ports');
+        return;
+      }
+      setStep(3);
     }
   };
 
