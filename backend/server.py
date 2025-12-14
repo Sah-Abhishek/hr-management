@@ -101,6 +101,20 @@ class Organization(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: Optional[str] = None
 
+# Salary Component Models
+class SalaryComponent(BaseModel):
+    name: str
+    amount: float
+    type: str  # 'earning' or 'deduction'
+    is_percentage: bool = False  # If true, amount is percentage of basic
+    calculation_base: Optional[str] = None  # 'basic', 'gross', etc.
+
+class SalaryStructure(BaseModel):
+    employee_id: str
+    basic_salary: float
+    components: List[SalaryComponent] = []
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class EmployeeCreate(BaseModel):
     email: EmailStr
     password: str
