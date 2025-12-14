@@ -34,7 +34,7 @@ const EmployeesPage = () => {
     full_name: '',
     department: '',
     phone: '',
-    organization_id: '',
+    organization_id: 'none',
     manager_email: '',
   });
 
@@ -102,7 +102,7 @@ const EmployeesPage = () => {
         full_name: '',
         department: '',
         phone: '',
-        organization_id: '',
+        organization_id: 'none',
         manager_email: '',
       });
       fetchEmployees();
