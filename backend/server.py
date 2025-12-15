@@ -15,6 +15,7 @@ from passlib.context import CryptContext
 import asyncio
 import resend
 from twilio.rest import Client
+from enum import Enum
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -62,22 +63,48 @@ api_router = APIRouter(prefix="/api")
 
 # ============= MODELS =============
 
-class UserRole:
+class UserDB(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    email: EmailStr
+    role: str
+    employee_id: str
+    name: Optional[str] = None
+    full_name: Optional[str] = None
+    department: Optional[str] = None
+    designation: Optional[str] = None
+    phone: Optional[str] = None
+    date_of_joining: Optional[datetime] = None
+    created_at: datetime
+    hashed_password: Optional[str] = None
+
+class UserPublic(BaseModel):
+    id: str
+    email: EmailStr
+    full_name: str
+    role: str
+    employee_id: str
+
+
+
+class UserRole(str, Enum):
     ADMIN = "admin"
     MANAGER = "manager"
     EMPLOYEE = "employee"
 
-class LeaveStatus:
+
+class LeaveStatus(str, Enum):
     PENDING = "pending"
     MANAGER_APPROVED = "manager_approved"
     APPROVED = "approved"
     REJECTED = "rejected"
 
-class LeaveType:
+class LeaveType(str, Enum):
     SICK_LEAVE = "Sick Leave"
     CASUAL_LEAVE = "Casual Leave"
     PAID_LEAVE = "Paid Leave"
     UNPAID_LEAVE = "Unpaid Leave"
+
 
 # Auth Models
 class UserRegister(BaseModel):
@@ -98,16 +125,17 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
-    user: dict
+    user: UserPublic
 
-class User(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    email: EmailStr
-    full_name: str
-    role: str
-    employee_id: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# class User(BaseModel):
+#     model_config = ConfigDict(extra="ignore")
+#     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+#     email: EmailStr
+#     full_name: str
+#     role: str
+#     employee_id: str
+#     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # Employee Models
 class LeaveBalance(BaseModel):
@@ -242,12 +270,15 @@ def create_access_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> UserPublic:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
     try:
         token = credentials.credentials
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -256,31 +287,72 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     user_doc = await db.users.find_one({"email": email}, {"_id": 0})
     if user_doc is None:
         raise credentials_exception
-    
-    # Convert ISO string timestamps back to datetime
-    if isinstance(user_doc.get('created_at'), str):
-        user_doc['created_at'] = datetime.fromisoformat(user_doc['created_at'])
-    
-    return User(**user_doc)
 
-async def get_current_employee(current_user: User = Depends(get_current_user)):
-    employee = await db.employees.find_one({"email": current_user.email}, {"_id": 0})
+    # ---- Normalize datetime fields ----
+    if isinstance(user_doc.get("created_at"), str):
+        user_doc["created_at"] = datetime.fromisoformat(user_doc["created_at"])
+
+    if isinstance(user_doc.get("date_of_joining"), str):
+        user_doc["date_of_joining"] = datetime.fromisoformat(
+            user_doc["date_of_joining"]
+        )
+
+    # ---- EXPLICIT DB → API MAPPING (CRITICAL FIX) ----
+    return UserPublic(
+        id=user_doc["id"],
+        employee_id=user_doc["employee_id"],
+        full_name=user_doc.get("full_name") or user_doc.get("name"),
+        email=user_doc["email"],
+        role=user_doc["role"],
+    )
+
+
+
+# async def get_current_employee(current_user: UserPublic = Depends(get_current_user)):
+#     employee = await db.employees.find_one({"email": current_user.email}, {"_id": 0})
+#     if not employee:
+#         raise HTTPException(status_code=404, detail="Employee profile not found")
+    
+#     # Convert ISO strings to datetime
+#     for field in ['joining_date', 'created_at']:
+#         if isinstance(employee.get(field), str):
+#             employee[field] = datetime.fromisoformat(employee[field])
+    
+#     return Employee(**employee)
+
+async def get_current_employee(
+    current_user: UserPublic = Depends(get_current_user)
+):
+    employee = await db.employees.find_one(
+        {"email": current_user.email},
+        {"_id": 0}
+    )
+
     if not employee:
+        if current_user.role == UserRole.ADMIN:
+            # Virtual employee for admin
+            return Employee(
+                id=current_user.id,
+                employee_id="ADMIN",
+                email=current_user.email,
+                full_name=current_user.full_name,
+                role=current_user.role,
+                department="Administration",
+                designation="System Administrator",
+                joining_date=datetime.now(timezone.utc),
+                leave_balance=LeaveBalance()
+            )
         raise HTTPException(status_code=404, detail="Employee profile not found")
-    
-    # Convert ISO strings to datetime
-    for field in ['joining_date', 'created_at']:
-        if isinstance(employee.get(field), str):
-            employee[field] = datetime.fromisoformat(employee[field])
-    
+
     return Employee(**employee)
 
+
 def require_role(allowed_roles: List[str]):
-    async def role_checker(current_user: User = Depends(get_current_user)):
+    async def role_checker(current_user: UserPublic = Depends(get_current_user)):
         if current_user.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -331,7 +403,8 @@ async def register(user_data: UserRegister):
             manager_name = manager.get('full_name')
     
     employee = Employee(
-        id=employee_id,
+        id=str(uuid.uuid4()),
+        employee_id=employee_id,
         email=user_data.email,
         full_name=user_data.full_name,
         role=user_data.role,
@@ -345,8 +418,8 @@ async def register(user_data: UserRegister):
     )
     
     emp_doc = employee.model_dump()
-    emp_doc['joining_date'] = emp_doc['joining_date'].isoformat()
-    emp_doc['created_at'] = emp_doc['created_at'].isoformat()
+    # emp_doc['joining_date'] = emp_doc['joining_date'].isoformat()
+    # emp_doc['created_at'] = emp_doc['created_at'].isoformat()
     
     await db.employees.insert_one(emp_doc)
     
@@ -393,30 +466,57 @@ async def register(user_data: UserRegister):
     return Token(
         access_token=access_token,
         token_type="bearer",
-        user=user.model_dump()
+        user=user
     )
+
 
 @api_router.post("/auth/login", response_model=Token)
 async def login(credentials: UserLogin):
-    user_doc = await db.users.find_one({"email": credentials.email}, {"_id": 0})
+    user_doc = await db.users.find_one(
+        {"email": credentials.email},
+        {"_id": 0}
+    )
+
     if not user_doc:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    if not verify_password(credentials.password, user_doc['hashed_password']):
+
+    # ---- Password check (safe) ----
+    hashed_password = user_doc.get("hashed_password")
+    if not hashed_password:
+        raise HTTPException(500, "Password not set")
+
+    if not verify_password(credentials.password, hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    # Convert ISO string to datetime
-    if isinstance(user_doc.get('created_at'), str):
-        user_doc['created_at'] = datetime.fromisoformat(user_doc['created_at'])
-    
-    user = User(**user_doc)
-    access_token = create_access_token(data={"sub": user.email})
-    
+
+    # ---- Normalize datetime fields ----
+    if isinstance(user_doc.get("created_at"), str):
+        user_doc["created_at"] = datetime.fromisoformat(user_doc["created_at"])
+
+    if isinstance(user_doc.get("date_of_joining"), str):
+        user_doc["date_of_joining"] = datetime.fromisoformat(
+            user_doc["date_of_joining"]
+        )
+
+    # ---- Explicit DB → API mapping (IMPORTANT) ----
+    user = UserPublic(
+        id=user_doc["id"],
+        employee_id=user_doc["employee_id"],
+        full_name=user_doc.get("full_name") or user_doc.get("name"),
+        email=user_doc["email"],
+        role=user_doc["role"],
+    )
+
+
+    access_token = create_access_token(
+        data={"sub": user.email}
+    )
+
     return Token(
         access_token=access_token,
         token_type="bearer",
         user=user.model_dump()
     )
+
 
 @api_router.get("/auth/me", response_model=Employee)
 async def get_me(current_employee: Employee = Depends(get_current_employee)):
@@ -427,7 +527,7 @@ async def get_me(current_employee: Employee = Depends(get_current_employee)):
 @api_router.post("/organizations", response_model=Organization)
 async def create_organization(
     org_data: dict,
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     """Create a new organization"""
     org = Organization(
@@ -445,7 +545,7 @@ async def create_organization(
 
 @api_router.get("/organizations", response_model=List[Organization])
 async def get_organizations(
-    current_user: User = Depends(get_current_user)
+    current_user: UserPublic = Depends(get_current_user)
 ):
     """Get all organizations"""
     orgs = await db.organizations.find({}, {"_id": 0}).to_list(1000)
@@ -460,7 +560,7 @@ async def get_organizations(
 async def update_organization(
     org_id: str,
     org_data: dict,
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     """Update organization details"""
     org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
@@ -497,7 +597,7 @@ async def update_organization(
 @api_router.delete("/organizations/{org_id}")
 async def delete_organization(
     org_id: str,
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     """Delete an organization"""
     # Check if there are employees in this organization
@@ -554,7 +654,7 @@ async def validate_employee_id_unique(employee_id: str, exclude_id: str = None):
 
 @api_router.get("/employees", response_model=List[Employee])
 async def get_all_employees(
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
 ):
     employees = await db.employees.find({}, {"_id": 0}).to_list(1000)
     
@@ -566,8 +666,8 @@ async def get_all_employees(
     return employees
 
 @api_router.get("/employees/{employee_id}", response_model=Employee)
-async def get_employee(employee_id: str, current_user: User = Depends(get_current_user)):
-    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+async def get_employee(employee_id: str, current_user: UserPublic = Depends(get_current_user)):
+    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -580,7 +680,7 @@ async def get_employee(employee_id: str, current_user: User = Depends(get_curren
 @api_router.post("/employees", response_model=Employee)
 async def create_employee(
     employee_data: EmployeeCreate,
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     # Check if user exists
     existing_user = await db.users.find_one({"email": employee_data.email})
@@ -636,7 +736,8 @@ async def create_employee(
     
     # Create employee
     employee = Employee(
-        id=employee_id,
+        id=str(uuid.uuid4()),
+        employee_id=employee_id,
         email=employee_data.email,
         full_name=employee_data.full_name,
         role=employee_data.role,
@@ -652,8 +753,8 @@ async def create_employee(
     )
     
     emp_doc = employee.model_dump()
-    emp_doc['joining_date'] = emp_doc['joining_date'].isoformat()
-    emp_doc['created_at'] = emp_doc['created_at'].isoformat()
+    # emp_doc['joining_date'] = emp_doc['joining_date'].isoformat()
+    # emp_doc['created_at'] = emp_doc['created_at'].isoformat()
     
     await db.employees.insert_one(emp_doc)
     
@@ -677,15 +778,16 @@ async def create_employee(
         logger.error(f"Failed to send welcome email: {str(e)}")
     
     return employee
+    
 
 @api_router.put("/employees/{employee_id}", response_model=Employee)
 async def update_employee(
     employee_id: str,
     update_data: EmployeeUpdate,
-    current_user: User = Depends(get_current_user)
+    current_user: UserPublic = Depends(get_current_user)
 ):
     # Check if employee exists
-    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -713,12 +815,12 @@ async def update_employee(
     
     if update_dict:
         await db.employees.update_one(
-            {"id": employee_id},
+            {"employee_id": employee_id},
             {"$set": update_dict}
         )
     
     # Fetch updated employee
-    updated_employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    updated_employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
     
     for field in ['joining_date', 'created_at']:
         if isinstance(updated_employee.get(field), str):
@@ -733,10 +835,10 @@ class RoleUpdate(BaseModel):
 async def update_employee_role(
     employee_id: str,
     role_data: RoleUpdate,
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     # Check if employee exists
-    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -751,7 +853,7 @@ async def update_employee_role(
     )
     
     await db.employees.update_one(
-        {"id": employee_id},
+        {"employee_id": employee_id},
         {"$set": {"role": role_data.role}}
     )
     
@@ -760,15 +862,15 @@ async def update_employee_role(
 @api_router.delete("/employees/{employee_id}")
 async def delete_employee(
     employee_id: str,
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
-    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
     # Delete user and employee
     await db.users.delete_one({"email": employee['email']})
-    await db.employees.delete_one({"id": employee_id})
+    await db.employees.delete_one({"employee_id": employee_id})
     
     return {"message": "Employee deleted successfully"}
 
@@ -791,10 +893,10 @@ class CompOffGrant(BaseModel):
 async def adjust_leave_balance(
     employee_id: str,
     adjustment_data: LeaveBalanceAdjustment,
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
 ):
     # Check if employee exists
-    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -813,7 +915,7 @@ async def adjust_leave_balance(
     
     # Update balance
     await db.employees.update_one(
-        {"id": employee_id},
+        {"employee_id": employee_id},
         {"$set": {f"leave_balance.{adjustment_data.leave_type}": new_balance}}
     )
     
@@ -847,7 +949,7 @@ class EmployeeIdSettings(BaseModel):
 
 @api_router.get("/employee-id-settings", response_model=EmployeeIdSettings)
 async def get_employee_id_settings_endpoint(
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     """Get current employee ID settings"""
     settings = await db.employee_id_settings.find_one({}, {"_id": 0})
@@ -858,7 +960,7 @@ async def get_employee_id_settings_endpoint(
 @api_router.post("/employee-id-settings")
 async def update_employee_id_settings(
     settings: EmployeeIdSettings,
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     """Update employee ID settings"""
     settings_dict = settings.model_dump()
@@ -986,7 +1088,7 @@ async def get_my_leaves(current_employee: Employee = Depends(get_current_employe
 
 @api_router.get("/leaves/pending", response_model=List[Leave])
 async def get_pending_leaves(
-    current_user: User = Depends(get_current_user),
+    current_user: UserPublic = Depends(get_current_user),
     current_employee: Employee = Depends(get_current_employee)
 ):
     query = {}
@@ -1019,7 +1121,7 @@ async def get_pending_leaves(
 
 @api_router.get("/leaves/all", response_model=List[Leave])
 async def get_all_leaves(
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     leaves = await db.leaves.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     
@@ -1037,7 +1139,7 @@ async def get_all_leaves(
 async def action_on_leave(
     leave_id: str,
     action_data: LeaveAction,
-    current_user: User = Depends(get_current_user),
+    current_user: UserPublic = Depends(get_current_user),
     current_employee: Employee = Depends(get_current_employee)
 ):
     # Fetch leave
@@ -1185,7 +1287,7 @@ async def action_on_leave(
 
 @api_router.get("/dashboard/stats", response_model=DashboardStats)
 async def get_dashboard_stats(
-    current_user: User = Depends(get_current_user),
+    current_user: UserPublic = Depends(get_current_user),
     current_employee: Employee = Depends(get_current_employee)
 ):
     stats = DashboardStats()
@@ -1243,7 +1345,7 @@ async def get_dashboard_stats(
 @api_router.post("/comp-off/grant")
 async def grant_comp_off(
     comp_off_data: CompOffGrant,
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
 ):
     # Verify employee exists
     employee = await db.employees.find_one({"id": comp_off_data.employee_id}, {"_id": 0})
@@ -1276,7 +1378,7 @@ async def grant_comp_off(
 
 @api_router.get("/comp-off/records")
 async def get_comp_off_records(
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
 ):
     records = await db.comp_off_records.find({}, {"_id": 0}).to_list(1000)
     return records
@@ -1286,7 +1388,7 @@ async def get_comp_off_records(
 @api_router.post("/salary-template")
 async def save_salary_template(
     template: dict,
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     """Save the standard salary template for all employees"""
     template_data = {
@@ -1306,7 +1408,7 @@ async def save_salary_template(
 
 @api_router.get("/salary-template")
 async def get_salary_template(
-    current_user: User = Depends(get_current_user)
+    current_user: UserPublic = Depends(get_current_user)
 ):
     """Get the standard salary template"""
     template = await db.salary_templates.find_one({"id": "default_template"}, {"_id": 0})
@@ -1338,10 +1440,10 @@ async def get_salary_template(
 async def save_salary_structure(
     employee_id: str,
     structure: dict,
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     """Save salary structure for an employee"""
-    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -1381,7 +1483,7 @@ async def save_salary_structure(
     
     # Update employee's monthly_salary
     await db.employees.update_one(
-        {"id": employee_id},
+        {"employee_id": employee_id},
         {"$set": {"monthly_salary": salary_data['net_salary']}}
     )
     
@@ -1390,12 +1492,12 @@ async def save_salary_structure(
 @api_router.get("/salary-structure/{employee_id}")
 async def get_salary_structure(
     employee_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: UserPublic = Depends(get_current_user)
 ):
     """Get salary structure for an employee"""
     # Check permissions
     if current_user.role not in ['admin', 'manager']:
-        employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+        employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
         if not employee or employee['email'] != current_user.email:
             raise HTTPException(status_code=403, detail="Not authorized")
     
@@ -1403,7 +1505,7 @@ async def get_salary_structure(
     
     if not structure:
         # Return default structure
-        employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+        employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
         if employee and employee.get('monthly_salary'):
             return {
                 "employee_id": employee_id,
@@ -1422,14 +1524,14 @@ async def get_salary_structure(
 @api_router.post("/payroll/send-detailed-salary-slip")
 async def send_detailed_salary_slip(
     data: dict,
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     """Send detailed salary slip with component breakdown"""
     employee_id = data.get('employee_id')
     month_year = data.get('month')
     
     # Get employee and salary structure
-    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -1617,14 +1719,14 @@ async def send_detailed_salary_slip(
 @api_router.post("/payroll/send-salary-slip")
 async def send_salary_slip(
     data: dict,
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     """Send salary slip email to employee for a specific month"""
     employee_id = data.get('employee_id')
     month_year = data.get('month')  # Format: YYYY-MM
     
     # Get employee
-    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -1819,11 +1921,11 @@ async def send_salary_slip(
 async def get_employee_payroll_report(
     employee_id: str,
     month: str,  # Format: YYYY-MM
-    current_user: User = Depends(get_current_user)
+    current_user: UserPublic = Depends(get_current_user)
 ):
     """Get payroll report for an employee for a specific month"""
     # Allow employee to see their own report or admin/manager to see anyone's
-    employee = await db.employees.find_one({"id": employee_id}, {"_id": 0})
+    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
@@ -1894,7 +1996,7 @@ async def get_employee_payroll_report(
 @api_router.get("/payroll/monthly-summary/{month}")
 async def get_monthly_payroll_summary(
     month: str,  # Format: YYYY-MM
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     """Get payroll summary for all employees for a specific month"""
     year, month_num = month.split('-')
@@ -1980,7 +2082,7 @@ class NotificationSettings(BaseModel):
 @api_router.post("/notification-settings")
 async def save_notification_settings(
     settings: NotificationSettings,
-    current_user: User = Depends(require_role([UserRole.ADMIN]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     """Save notification settings to database"""
     try:
@@ -1999,7 +2101,7 @@ async def save_notification_settings(
 
 @api_router.get("/notification-settings")
 async def get_notification_settings(
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
 ):
     """Get current notification settings"""
     settings = await db.notification_settings.find_one({}, {"_id": 0})
@@ -2289,8 +2391,10 @@ async def get_setup_status():
     }
 
 @app.post("/api/setup/test-connection")
-async def test_database_connection(config: SetupDBConfig):
+async def test_database_connection(config: SetupDBConfig | None = None):
     """Test MongoDB connection"""
+    if config is None:
+        return Response(status_code=200)
     try:
         # Save PEM certificate if provided
         pem_path = None
@@ -2326,19 +2430,24 @@ async def test_database_connection(config: SetupDBConfig):
         }
 
 @app.post("/api/setup/configure")
-async def configure_setup(db_config: SetupDBConfig, server_config: SetupServerConfig, admin_config: SetupAdminConfig):
+async def configure_setup(
+    db_config: SetupDBConfig,
+    server_config: SetupServerConfig,
+    admin_config: SetupAdminConfig
+):
     """Complete setup: configure database and create admin user"""
     global client, db
-    
+
     try:
+        # ---------------------------------------------------------
         # 1. Test and save database configuration
+        # ---------------------------------------------------------
         pem_path = None
         if db_config.pem_certificate:
-            pem_path = ROOT_DIR / 'mongodb_cert.pem'
-            with open(pem_path, 'w') as f:
+            pem_path = ROOT_DIR / "mongodb_cert.pem"
+            with open(pem_path, "w") as f:
                 f.write(db_config.pem_certificate)
-        
-        # Connect to database
+
         if pem_path:
             client = AsyncIOMotorClient(
                 db_config.mongo_url,
@@ -2347,67 +2456,84 @@ async def configure_setup(db_config: SetupDBConfig, server_config: SetupServerCo
             )
         else:
             client = AsyncIOMotorClient(db_config.mongo_url)
-        
+
         db = client[db_config.db_name]
-        await db.command('ping')
-        
+        await db.command("ping")
+
+        # ---------------------------------------------------------
         # 2. Check if admin already exists
+        # ---------------------------------------------------------
         existing_admin = await db.users.find_one({"role": "admin"})
         if existing_admin:
             return {
                 "success": False,
-                "message": "Admin user already exists. Setup may have been completed already."
+                "message": "Admin user already exists. Setup already completed."
             }
-        
-        # 3. Create admin user
+
+        # ---------------------------------------------------------
+        # 3. Create admin user + admin employee
+        # ---------------------------------------------------------
+        admin_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
+
         hashed_password = pwd_context.hash(admin_config.password)
+
         admin_user = {
-            "id": str(uuid.uuid4()),
+            "id": admin_id,
             "employee_id": "ADMIN001",
-            "name": admin_config.name,
+            "full_name": admin_config.name,
             "email": admin_config.email,
-            "password": hashed_password,
+            "hashed_password": hashed_password,
             "role": "admin",
             "department": "Administration",
             "designation": "System Administrator",
             "phone": "",
-            "date_of_joining": datetime.now(timezone.utc).isoformat(),
-            "manager_id": None,
             "organization_id": None,
-            "salary": 0,
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": now
         }
-        
         await db.users.insert_one(admin_user)
-        
-        # 4. Initialize default settings
-        default_settings = {
+
+        admin_employee = {
+            "id": admin_id,
+            "employee_id": "ADMIN001",
+            "email": admin_config.email,
+            "full_name": admin_config.name,
+            "role": "admin",
+            "department": "Administration",
+            "designation": "System Administrator",
+            "phone": "",
+            "organization_id": None,
+            "organization_name": None,
+            "joining_date": now,
+            "manager_email": None,
+            "manager_name": None,
+            "leave_balance": {
+                "sick_leave": 10.0,
+                "casual_leave": 15.0,
+                "paid_leave": 20.0,
+                "unpaid_leave": 0.0
+            },
+            "created_at": now
+        }
+        await db.employees.insert_one(admin_employee)
+
+        # ---------------------------------------------------------
+        # 4. Initialize system settings
+        # ---------------------------------------------------------
+        await db.settings.insert_one({
             "id": str(uuid.uuid4()),
             "departments": ["HR", "Engineering", "Sales", "Marketing", "Finance", "Operations"],
             "designations": ["Manager", "Senior Developer", "Developer", "Analyst", "Executive"],
             "leave_types": ["Sick Leave", "Casual Leave", "Paid Leave", "Unpaid Leave", "Comp-Off"],
             "employee_id_prefix": "EMP",
             "employee_id_counter": 1,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        
-        await db.settings.insert_one(default_settings)
-        
-        # 5. Initialize leave balances for admin
-        leave_balance = {
-            "employee_id": admin_user["id"],
-            "balances": {
-                "Sick Leave": 10.0,
-                "Casual Leave": 15.0,
-                "Paid Leave": 20.0,
-                "Unpaid Leave": 0.0,
-                "Comp-Off": 0.0
-            }
-        }
-        await db.leave_balances.insert_one(leave_balance)
-        
-        # 6. Create default salary template
-        default_template = {
+            "created_at": now
+        })
+
+        # ---------------------------------------------------------
+        # 5. Default salary template
+        # ---------------------------------------------------------
+        await db.salary_templates.insert_one({
             "id": str(uuid.uuid4()),
             "earnings": [
                 {"name": "Basic Salary", "order": 1},
@@ -2422,70 +2548,62 @@ async def configure_setup(db_config: SetupDBConfig, server_config: SetupServerCo
                 {"name": "Tax Deducted at Source (TDS)", "order": 2},
                 {"name": "Employee Provident Fund (EPF)", "order": 3}
             ],
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "updated_by": admin_user["id"]
-        }
-        await db.salary_templates.insert_one(default_template)
-        
-        # 7. Update backend .env file
-        backend_env_content = f"""# Production Environment Configuration - Auto-generated by Setup Wizard
-# Backend Server Configuration
-PORT={server_config.backend_port}
-HOST=0.0.0.0
+            "created_at": now,
+            "updated_at": now,
+            "updated_by": admin_id
+        })
 
-# MongoDB Configuration
+        # ---------------------------------------------------------
+        # 6. BACKEND .env (SECRETS + SERVER CONFIG)
+        # ---------------------------------------------------------
+        backend_env_content = f"""# Auto-generated by HRMS Setup Wizard
+HOST=0.0.0.0
+PORT={server_config.backend_port}
+
 MONGO_URL={db_config.mongo_url}
 DB_NAME={db_config.db_name}
 
-# Security
 JWT_SECRET_KEY={server_config.jwt_secret}
-CORS_ORIGINS=http://{server_config.server_ip}:{server_config.frontend_port},http://{server_config.server_ip}
 
-# Application URLs
+CORS_ORIGINS=http://{server_config.server_ip}:{server_config.frontend_port}
+
 FRONTEND_URL=http://{server_config.server_ip}:{server_config.frontend_port}
 BACKEND_URL=http://{server_config.server_ip}:{server_config.backend_port}
 
-# Email Configuration (Optional - for notifications)
-EMAIL_PROVIDER=
-EMAIL_API_KEY=
-
-# Environment
 ENVIRONMENT=production
 """
-        
-        backend_env_file = ROOT_DIR / '.env'
-        with open(backend_env_file, 'w') as f:
+
+        with open(ROOT_DIR / ".env", "w") as f:
             f.write(backend_env_content)
-        
-        # 8. Update frontend .env file
-        frontend_env_content = f"""# Production Environment Configuration - Auto-generated by Setup Wizard
-# Backend API URL
+
+        # ---------------------------------------------------------
+        # 7. FRONTEND .env (UI CONFIG ONLY)
+        # ---------------------------------------------------------
+        frontend_env_content = f"""# Auto-generated by HRMS Setup Wizard
 REACT_APP_BACKEND_URL=http://{server_config.server_ip}:{server_config.backend_port}
 
-# Disable development features
 REACT_APP_ENABLE_VISUAL_EDITS=false
-ENABLE_HEALTH_CHECK=false
+REACT_APP_ENABLE_HEALTH_CHECK=false
 
-# Environment
 NODE_ENV=production
 """
-        
-        frontend_env_file = ROOT_DIR.parent / 'frontend' / '.env'
-        with open(frontend_env_file, 'w') as f:
+
+        with open(ROOT_DIR.parent / "frontend" / ".env", "w") as f:
             f.write(frontend_env_content)
-        
-        # 9. Mark setup as completed
+
+        # ---------------------------------------------------------
+        # 8. Mark setup completed
+        # ---------------------------------------------------------
         mark_setup_completed()
-        
+
         return {
             "success": True,
-            "message": "Setup completed successfully! Please restart both backend and frontend servers.",
+            "message": "Setup completed successfully. Restart backend and frontend.",
             "admin_email": admin_config.email,
             "frontend_url": f"http://{server_config.server_ip}:{server_config.frontend_port}",
             "backend_url": f"http://{server_config.server_ip}:{server_config.backend_port}"
         }
-        
+
     except Exception as e:
         return {
             "success": False,
@@ -2551,6 +2669,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
