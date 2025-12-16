@@ -115,7 +115,7 @@ const LeaveBalancePage = () => {
       const adjustment = adjustForm.adjustment_type === 'add' ? days : -days;
 
       // Update leave balance
-      const currentBalance = selectedEmployee.leave_balance[leaveTypeKey] || 0;
+      const currentBalance = selectedEmployee.leave_balance?.[leaveTypeKey] ?? 0;
       const newBalance = currentBalance + adjustment;
 
       if (newBalance < 0) {
@@ -125,10 +125,12 @@ const LeaveBalancePage = () => {
 
       // Call API to update
       await api.put(`/employees/${selectedEmployee.id}/leave-balance`, {
-        leave_type: leaveTypeKey,
-        adjustment: adjustment,
+        leave_type: adjustForm.leave_type,        // "Sick Leave"
+        adjustment_type: adjustForm.adjustment_type, // "add" | "deduct"
+        days: days,                               // number
         reason: adjustForm.reason
       });
+
 
       toast.success(
         `${adjustForm.adjustment_type === 'add' ? 'Added' : 'Deducted'} ${days} ${adjustForm.leave_type} ${days > 1 ? 'days' : 'day'}`
@@ -141,9 +143,11 @@ const LeaveBalancePage = () => {
     }
   };
 
-  const getTotalLeaves = (leaveBalance) => {
-    return Object.values(leaveBalance).reduce((sum, val) => sum + (val || 0), 0);
+  const getTotalLeaves = (leaveBalance = {}) => {
+    if (!leaveBalance || typeof leaveBalance !== 'object') return 0;
+    return Object.values(leaveBalance).reduce((sum, val) => sum + (Number(val) || 0), 0);
   };
+
 
   if (loading) {
     return (
@@ -217,7 +221,7 @@ const LeaveBalancePage = () => {
               <div className="grid grid-cols-2 gap-4">
                 {leaveTypes.map((leaveType) => {
                   const key = leaveType.name.toLowerCase().replace(/ /g, '_');
-                  const balance = employee.leave_balance[key] || 0;
+                  const balance = employee.leave_balance?.[key] ?? 0;
                   const isLow = balance < 3 && balance > 0;
                   const isEmpty = balance === 0;
 

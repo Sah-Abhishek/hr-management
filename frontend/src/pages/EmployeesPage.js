@@ -143,10 +143,16 @@ const EmployeesPage = () => {
         designation: selectedEmployee.designation,
         phone: selectedEmployee.phone,
         monthly_salary: selectedEmployee.monthly_salary || null,
-        organization_id: (selectedEmployee.organization_id && selectedEmployee.organization_id !== 'none') ? selectedEmployee.organization_id : null,
-        manager_email: selectedEmployee.manager_email === 'none' ? '' : selectedEmployee.manager_email,
-        employee_id: selectedEmployee.employee_id,
+        organization_id:
+          selectedEmployee.organization_id && selectedEmployee.organization_id !== 'none'
+            ? selectedEmployee.organization_id
+            : null,
+        manager_email:
+          selectedEmployee.manager_email === 'none'
+            ? null
+            : selectedEmployee.manager_email
       });
+
 
       // If role changed, update it separately
       if (originalEmployee.role !== selectedEmployee.role) {
@@ -339,41 +345,50 @@ const EmployeesPage = () => {
       </div>
 
       {/* Edit Employee Dialog */}
+      {/* Edit Employee Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Employee</DialogTitle>
           </DialogHeader>
+
           {selectedEmployee && (
             <form onSubmit={handleUpdateEmployee} className="space-y-4 mt-4">
-              <div>
-                <Label htmlFor="edit-emp-id">Employee ID *</Label>
+
+              {/* Employee ID (READ ONLY) */}
+              {/* <div>
+                <Label>Employee ID</Label>
                 <Input
-                  id="edit-emp-id"
-                  placeholder="EMP1001"
                   value={selectedEmployee.employee_id}
-                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, employee_id: e.target.value.toUpperCase() })}
-                  required
-                  className="mt-1"
+                  disabled
+                  className="mt-1 bg-slate-100 cursor-not-allowed"
                 />
-                <p className="text-xs text-slate-500 mt-1">Must be unique across all employees</p>
-              </div>
+              </div> */}
+
+              {/* Full Name */}
               <div>
-                <Label htmlFor="edit-emp-name">Full Name *</Label>
+                <Label>Full Name *</Label>
                 <Input
-                  id="edit-emp-name"
-                  placeholder="John Doe"
                   value={selectedEmployee.full_name}
-                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, full_name: e.target.value })}
+                  onChange={(e) =>
+                    setSelectedEmployee({ ...selectedEmployee, full_name: e.target.value })
+                  }
                   required
                   className="mt-1"
                 />
               </div>
+
+              {/* Organization */}
               <div>
-                <Label htmlFor="edit-emp-organization">Organization</Label>
+                <Label>Organization</Label>
                 <Select
                   value={selectedEmployee.organization_id || 'none'}
-                  onValueChange={(value) => setSelectedEmployee({ ...selectedEmployee, organization_id: value })}
+                  onValueChange={(value) =>
+                    setSelectedEmployee({
+                      ...selectedEmployee,
+                      organization_id: value === 'none' ? null : value
+                    })
+                  }
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select organization (optional)" />
@@ -381,43 +396,62 @@ const EmployeesPage = () => {
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
                     {organizations.map(org => (
-                      <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Department */}
               <div>
-                <Label htmlFor="edit-emp-department">Department *</Label>
+                <Label>Department *</Label>
                 <Select
                   value={selectedEmployee.department}
-                  onValueChange={(value) => setSelectedEmployee({ ...selectedEmployee, department: value })}
+                  onValueChange={(value) =>
+                    setSelectedEmployee({ ...selectedEmployee, department: value })
+                  }
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
                     {departments.map(dept => (
-                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Designation */}
               <div>
-                <Label htmlFor="edit-emp-designation">Designation *</Label>
+                <Label>Designation *</Label>
                 <Input
-                  id="edit-emp-designation"
-                  placeholder="Software Engineer"
                   value={selectedEmployee.designation}
-                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, designation: e.target.value })}
+                  onChange={(e) =>
+                    setSelectedEmployee({ ...selectedEmployee, designation: e.target.value })
+                  }
                   required
                   className="mt-1"
                 />
               </div>
+
+              {/* Role */}
               <div>
-                <Label htmlFor="edit-emp-role">Role *</Label>
+                <Label>Role *</Label>
                 <Select
                   value={selectedEmployee.role}
-                  onValueChange={(value) => setSelectedEmployee({ ...selectedEmployee, role: value })}
+                  onValueChange={(value) =>
+                    setSelectedEmployee({
+                      ...selectedEmployee,
+                      role: value,
+                      // Clear manager if role changes
+                      manager_email: value !== 'employee' ? null : selectedEmployee.manager_email
+                    })
+                  }
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select role" />
@@ -428,36 +462,82 @@ const EmployeesPage = () => {
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
+
                 <p className="text-xs text-amber-600 mt-1">
-                  {selectedEmployee.role === 'manager' && 'Managers can approve leave requests from their team'}
+                  {selectedEmployee.role === 'manager' && 'Managers can approve leave requests'}
                   {selectedEmployee.role === 'admin' && 'Admins have full system access'}
                   {selectedEmployee.role === 'employee' && 'Regular employee access'}
                 </p>
               </div>
+
+              {/* ✅ MANAGER SELECT (ONLY FOR EMPLOYEES) */}
+              {selectedEmployee.role === 'employee' && (
+                <div>
+                  <Label>Manager</Label>
+                  <Select
+                    value={selectedEmployee.manager_email || 'none'}
+                    onValueChange={(value) =>
+                      setSelectedEmployee({
+                        ...selectedEmployee,
+                        manager_email: value === 'none' ? null : value
+                      })
+                    }
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select manager (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {managers.map(mgr => (
+                        <SelectItem key={mgr.email} value={mgr.email}>
+                          {mgr.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <p className="text-xs text-slate-500 mt-1">
+                    Manager will approve leave requests
+                  </p>
+                </div>
+              )}
+
+              {/* Phone */}
               <div>
-                <Label htmlFor="edit-emp-phone">Phone Number *</Label>
+                <Label>Phone Number *</Label>
                 <Input
-                  id="edit-emp-phone"
                   type="tel"
-                  placeholder="+1234567890"
                   value={selectedEmployee.phone}
-                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, phone: e.target.value })}
+                  onChange={(e) =>
+                    setSelectedEmployee({ ...selectedEmployee, phone: e.target.value })
+                  }
                   required
                   className="mt-1"
                 />
               </div>
+
+              {/* Salary */}
               <div>
-                <Label htmlFor="edit-emp-salary">Monthly Salary (₹)</Label>
+                <Label>Monthly Salary (₹)</Label>
                 <Input
-                  id="edit-emp-salary"
                   type="number"
-                  placeholder="50000"
                   value={selectedEmployee.monthly_salary || ''}
-                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, monthly_salary: parseFloat(e.target.value) || null })}
+                  onChange={(e) =>
+                    setSelectedEmployee({
+                      ...selectedEmployee,
+                      monthly_salary: e.target.value
+                        ? Number(e.target.value)
+                        : null
+                    })
+                  }
                   className="mt-1"
                 />
-                <p className="text-xs text-slate-500 mt-1">Required for salary slip generation</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Required for salary slip generation
+                </p>
               </div>
+
+              {/* Actions */}
               <div className="flex gap-3 pt-2">
                 <Button
                   type="button"
@@ -476,10 +556,12 @@ const EmployeesPage = () => {
                   {submitting ? 'Updating...' : 'Update Employee'}
                 </Button>
               </div>
+
             </form>
           )}
         </DialogContent>
       </Dialog>
+
 
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-lg border border-slate-200">

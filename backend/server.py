@@ -16,6 +16,7 @@ import asyncio
 import resend
 from twilio.rest import Client
 from enum import Enum
+from datetime import datetime, timezone, timedelta, date
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -143,6 +144,7 @@ class LeaveBalance(BaseModel):
     casual_leave: float = 12.0
     paid_leave: float = 15.0
     unpaid_leave: float = 0.0
+    # comp_off: float = 0.0 
 
 # Organization Model
 class Organization(BaseModel):
@@ -206,7 +208,10 @@ class EmployeeUpdate(BaseModel):
     monthly_salary: Optional[float] = None
     organization_id: Optional[str] = None
     manager_email: Optional[str] = None
-    employee_id: Optional[str] = None
+
+    class Config:
+        extra = "forbid"  
+
 
 # Leave Models
 class ApprovalRecord(BaseModel):
@@ -665,199 +670,461 @@ async def get_all_employees(
     
     return employees
 
-@api_router.get("/employees/{employee_id}", response_model=Employee)
-async def get_employee(employee_id: str, current_user: UserPublic = Depends(get_current_user)):
-    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
-    if not employee:
-        raise HTTPException(status_code=404, detail="Employee not found")
-    
-    for field in ['joining_date', 'created_at']:
-        if isinstance(employee.get(field), str):
-            employee[field] = datetime.fromisoformat(employee[field])
-    
-    return Employee(**employee)
-
 @api_router.post("/employees", response_model=Employee)
 async def create_employee(
     employee_data: EmployeeCreate,
     current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": employee_data.email})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Generate unique employee_id
-    employee_id = await generate_employee_id()
-    hashed_password = get_password_hash(employee_data.password)
-    
-    user = User(
-        email=employee_data.email,
-        full_name=employee_data.full_name,
-        role=employee_data.role,
-        employee_id=employee_id
+    now = datetime.now(timezone.utc)
+
+    # -------------------------------------------------
+    # 1. Check if user already exists
+    # -------------------------------------------------
+    existing_user = await db.users.find_one(
+        {"email": employee_data.email}
     )
-    
-    user_doc = user.model_dump()
-    user_doc['created_at'] = user_doc['created_at'].isoformat()
-    user_doc['hashed_password'] = hashed_password
-    
-    await db.users.insert_one(user_doc)
-    
-    # Get organization name if organization_id is provided
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="User with this email already exists"
+        )
+
+    # -------------------------------------------------
+    # 2. Generate IDs
+    # -------------------------------------------------
+    employee_uuid = str(uuid.uuid4())
+
+    settings = await db.settings.find_one({}, {"_id": 0})
+    if not settings:
+        raise HTTPException(
+            status_code=500,
+            detail="System settings not initialized"
+        )
+
+    employee_id = f"{settings['employee_id_prefix']}{settings['employee_id_counter']:04d}"
+
+    # increment EMP counter atomically
+    await db.settings.update_one(
+        {},
+        {"$inc": {"employee_id_counter": 1}}
+    )
+
+    # -------------------------------------------------
+    # 3. Resolve organization name (IMPORTANT FIX)
+    # -------------------------------------------------
     organization_name = None
     if employee_data.organization_id:
-        org = await db.organizations.find_one({"id": employee_data.organization_id}, {"_id": 0})
-        if org:
-            organization_name = org.get('name')
-    
-    # Auto-assign manager based on department if employee role
-    manager_email = employee_data.manager_email
-    manager_name = None
-    
-    if employee_data.role == UserRole.EMPLOYEE and not manager_email:
-        # Find a manager in the same department and organization
-        query = {
-            "department": employee_data.department,
-            "role": UserRole.MANAGER
-        }
-        if employee_data.organization_id:
-            query["organization_id"] = employee_data.organization_id
-            
-        dept_manager = await db.employees.find_one(query, {"_id": 0})
-        
-        if dept_manager:
-            manager_email = dept_manager['email']
-            manager_name = dept_manager.get('full_name')
-    elif manager_email:
-        manager = await db.employees.find_one({"email": manager_email}, {"_id": 0})
-        if manager:
-            manager_name = manager.get('full_name')
-    
-    # Create employee
-    employee = Employee(
-        id=str(uuid.uuid4()),
-        employee_id=employee_id,
-        email=employee_data.email,
-        full_name=employee_data.full_name,
-        role=employee_data.role,
-        department=employee_data.department,
-        designation=employee_data.designation,
-        phone=employee_data.phone,
-        organization_id=employee_data.organization_id,
-        organization_name=organization_name,
-        joining_date=employee_data.joining_date,
-        manager_email=manager_email,
-        manager_name=manager_name,
-        leave_balance=employee_data.leave_balance
-    )
-    
-    emp_doc = employee.model_dump()
-    # emp_doc['joining_date'] = emp_doc['joining_date'].isoformat()
-    # emp_doc['created_at'] = emp_doc['created_at'].isoformat()
-    
-    await db.employees.insert_one(emp_doc)
-    
-    # Send welcome email to new employee
-    try:
-        welcome_html = generate_welcome_email(
-            employee_name=employee_data.full_name,
-            employee_id=employee_id,
-            email=employee_data.email,
-            role=employee_data.role,
-            department=employee_data.department,
-            designation=employee_data.designation
+        org = await db.organizations.find_one(
+            {"id": employee_data.organization_id},
+            {"_id": 0, "name": 1}
         )
-        await send_email_notification(
-            to_email=employee_data.email,
-            subject=f"Welcome to HRMS - {employee_data.full_name}",
-            html_content=welcome_html
-        )
-        logger.info(f"Welcome email sent to new employee: {employee_data.email}")
-    except Exception as e:
-        logger.error(f"Failed to send welcome email: {str(e)}")
-    
-    return employee
-    
+        if not org:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid organization_id"
+            )
+        organization_name = org["name"]
 
-@api_router.put("/employees/{employee_id}", response_model=Employee)
+    manager_name = None
+    if employee_data.manager_email:
+        manager = await db.employees.find_one(
+            {"email": employee_data.manager_email},
+            {"_id": 0, "full_name": 1}
+        )
+        if not manager:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid manager_email"
+            )
+        manager_name = manager["full_name"]
+
+
+    # -------------------------------------------------
+    # 4. Create USER (auth account)
+    # -------------------------------------------------
+    user_doc = {
+        "id": employee_uuid,
+        "employee_id": employee_id,
+        "full_name": employee_data.full_name,
+        "email": employee_data.email,
+        "hashed_password": pwd_context.hash(employee_data.password),
+        "role": employee_data.role,
+        "department": employee_data.department,
+        "designation": employee_data.designation,
+        "phone": employee_data.phone,
+        "organization_id": employee_data.organization_id,
+        "created_at": now
+    }
+
+    await db.users.insert_one(user_doc)
+
+    # -------------------------------------------------
+    # 5. Create EMPLOYEE (HR profile)
+    # -------------------------------------------------
+    employee_doc = {
+        "id": employee_uuid,
+        "employee_id": employee_id,
+        "email": employee_data.email,
+        "full_name": employee_data.full_name,
+        "role": employee_data.role,
+        "department": employee_data.department,
+        "designation": employee_data.designation,
+        "phone": employee_data.phone,
+        "organization_id": employee_data.organization_id,
+        "organization_name": organization_name,
+        "joining_date": employee_data.joining_date or now,
+        "manager_email": employee_data.manager_email,
+        "manager_name": manager_name,
+        "leave_balance": {
+            "sick_leave": 10.0,
+            "casual_leave": 15.0,
+            "paid_leave": 20.0,
+            "unpaid_leave": 0.0
+        },
+        "created_at": now
+    }
+
+    await db.employees.insert_one(employee_doc)
+
+    # -------------------------------------------------
+    # 6. Return API-safe Employee model
+    # -------------------------------------------------
+    return Employee(**employee_doc)
+
+
+@api_router.put("/employees/{user_id}", response_model=Employee)
 async def update_employee(
-    employee_id: str,
+    user_id: str,
     update_data: EmployeeUpdate,
     current_user: UserPublic = Depends(get_current_user)
 ):
-    # Check if employee exists
-    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
+    # --------------------------------------------------
+    # 1. Find USER
+    # --------------------------------------------------
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # --------------------------------------------------
+    # 2. Find EMPLOYEE
+    # --------------------------------------------------
+    employee = await db.employees.find_one({"email": user["email"]}, {"_id": 0})
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
-    
-    # Only admin or the employee themselves can update
-    if current_user.role != UserRole.ADMIN and employee['email'] != current_user.email:
+
+    # --------------------------------------------------
+    # 3. Permission check
+    # --------------------------------------------------
+    if current_user.role != UserRole.ADMIN and user["email"] != current_user.email:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    # Prepare update data
-    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
-    
-    # Validate employee_id uniqueness if being updated
-    if 'employee_id' in update_dict and update_dict['employee_id']:
-        if current_user.role != UserRole.ADMIN:
-            raise HTTPException(status_code=403, detail="Only admins can update employee ID")
-        
-        is_unique = await validate_employee_id_unique(update_dict['employee_id'], exclude_id=employee_id)
-        if not is_unique:
-            raise HTTPException(status_code=400, detail="Employee ID already exists. Please choose a unique ID.")
-    
-    # Get manager name if manager_email is being updated
-    if 'manager_email' in update_dict and update_dict['manager_email']:
-        manager = await db.employees.find_one({"email": update_dict['manager_email']}, {"_id": 0})
-        if manager:
-            update_dict['manager_name'] = manager.get('full_name')
-    
+
+    # --------------------------------------------------
+    # 4. Allowed fields ONLY (CRITICAL SAFETY)
+    # --------------------------------------------------
+    allowed_fields = {
+        "full_name",
+        "department",
+        "designation",
+        "phone",
+        "organization_id",
+        "manager_email"
+    }
+
+    incoming = update_data.model_dump(exclude_unset=True)
+    update_dict = {k: v for k, v in incoming.items() if k in allowed_fields}
+
+    # --------------------------------------------------
+    # 5. Resolve MANAGER
+    # --------------------------------------------------
+    if "manager_email" in update_dict:
+        if update_dict["manager_email"]:
+            manager = await db.employees.find_one(
+                {"email": update_dict["manager_email"]},
+                {"_id": 0, "full_name": 1}
+            )
+            if not manager:
+                raise HTTPException(status_code=400, detail="Invalid manager_email")
+
+            update_dict["manager_name"] = manager["full_name"]
+        else:
+            update_dict["manager_name"] = None
+
+    # --------------------------------------------------
+    # 6. Resolve ORGANIZATION
+    # --------------------------------------------------
+    if "organization_id" in update_dict:
+        if update_dict["organization_id"]:
+            org = await db.organizations.find_one(
+                {"id": update_dict["organization_id"]},
+                {"_id": 0, "name": 1}
+            )
+            if not org:
+                raise HTTPException(status_code=400, detail="Invalid organization_id")
+
+            update_dict["organization_name"] = org["name"]
+        else:
+            update_dict["organization_name"] = None
+
+    # --------------------------------------------------
+    # 7. Update EMPLOYEES (SAFE)
+    # --------------------------------------------------
     if update_dict:
         await db.employees.update_one(
-            {"employee_id": employee_id},
+            {"email": user["email"]},
             {"$set": update_dict}
         )
-    
-    # Fetch updated employee
-    updated_employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
-    
-    for field in ['joining_date', 'created_at']:
-        if isinstance(updated_employee.get(field), str):
-            updated_employee[field] = datetime.fromisoformat(updated_employee[field])
-    
+
+        # --------------------------------------------------
+        # 8. Sync USERS (NO ROLE, NO PASSWORD)
+        # --------------------------------------------------
+        user_sync_fields = {
+            k: update_dict[k]
+            for k in ["full_name", "department", "designation", "phone", "organization_id"]
+            if k in update_dict
+        }
+
+        if user_sync_fields:
+            await db.users.update_one(
+                {"id": user_id},
+                {"$set": user_sync_fields}
+            )
+
+    # --------------------------------------------------
+    # 9. Return updated employee
+    # --------------------------------------------------
+    updated_employee = await db.employees.find_one(
+        {"email": user["email"]},
+        {"_id": 0}
+    )
+
     return Employee(**updated_employee)
+
+
+
+# class RoleUpdate(BaseModel):
+#     role: str
+
+# @api_router.put("/employees/{employee_id}/role")
+# async def update_employee_role(
+#     employee_id: str,
+#     role_data: RoleUpdate,
+#     current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
+# ):
+#     # Check if employee exists
+#     employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
+#     if not employee:
+#         raise HTTPException(status_code=404, detail="Employee not found")
+    
+#     # Validate role
+#     if role_data.role not in [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE]:
+#         raise HTTPException(status_code=400, detail="Invalid role")
+    
+#     # Update role in both users and employees collections
+#     await db.users.update_one(
+#         {"email": employee['email']},
+#         {"$set": {"role": role_data.role}}
+#     )
+    
+#     await db.employees.update_one(
+#         {"employee_id": employee_id},
+#         {"$set": {"role": role_data.role}}
+#     )
+    
+#     return {"message": f"Role updated to {role_data.role}", "employee_id": employee_id, "new_role": role_data.role}
+
+
+class LeaveBalanceUpdate(BaseModel):
+    leave_type: str
+    reason: str
+    adjustment_type: Optional[str] = None
+    days: Optional[float] = None
+    adjustment: Optional[float] = None
+
+
+
+@api_router.put("/employees/{user_id}/leave-balance")
+async def update_leave_balance(
+    user_id: str,
+    data: LeaveBalanceUpdate,
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
+):
+    # ------------------------------------
+    # 1. Find USER by UUID
+    # ------------------------------------
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # ------------------------------------
+    # 2. Find EMPLOYEE via email
+    # ------------------------------------
+    employee = await db.employees.find_one(
+        {"email": user["email"]},
+        {"_id": 0}
+    )
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    # ------------------------------------
+    # 3. NORMALIZE leave type (🔥 CRITICAL FIX)
+    # ------------------------------------
+    leave_key = data.leave_type.lower().replace(" ", "_")
+
+    if leave_key not in employee["leave_balance"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid leave type: {data.leave_type}"
+        )
+
+    # ------------------------------------
+    # 4. Calculate new balance
+    # ------------------------------------
+    # -------------------------------
+    # Normalize & validate leave key
+    # -------------------------------
+    leave_key = leave_key.lower()
+
+    if leave_key not in employee.get("leave_balance", {}):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid leave type: {leave_key}"
+        )
+
+    # -------------------------------
+    # Validate days
+    # -------------------------------
+    if data.days <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Days must be greater than 0"
+        )
+
+    current_balance = float(employee["leave_balance"].get(leave_key, 0))
+
+    # -------------------------------
+    # Apply adjustment
+    # -------------------------------
+    if data.adjustment_type == "deduct":
+        if current_balance < data.days:
+            raise HTTPException(
+                status_code=400,
+                detail="Insufficient leave balance"
+            )
+        new_balance = round(current_balance - data.days, 2)
+
+    elif data.adjustment_type == "add":
+        new_balance = round(current_balance + data.days, 2)
+
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid adjustment type (must be 'add' or 'deduct')"
+        )
+
+
+    # ------------------------------------
+    # 5. Update balance
+    # ------------------------------------
+    await db.employees.update_one(
+        {"email": user["email"]},
+        {
+            "$set": {
+                f"leave_balance.{leave_key}": new_balance
+            }
+        }
+    )
+
+    # ------------------------------------
+    # 6. Audit log
+    # ------------------------------------
+    await db.leave_adjustments.insert_one({
+        "user_id": user_id,
+        "employee_id": employee["id"],
+        "leave_type": leave_key,
+        "adjustment_type": data.adjustment_type,
+        "days": data.days,
+        "reason": data.reason,
+        "adjusted_by": current_user.email,
+        "timestamp": datetime.now(timezone.utc)
+    })
+
+    return {
+        "message": "Leave balance updated successfully",
+        "leave_type": leave_key,
+        "new_balance": new_balance
+    }
+
+
 
 class RoleUpdate(BaseModel):
     role: str
 
-@api_router.put("/employees/{employee_id}/role")
+
+@api_router.put("/employees/{user_id}/role")
 async def update_employee_role(
-    employee_id: str,
+    user_id: str,
     role_data: RoleUpdate,
     current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
-    # Check if employee exists
-    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
+    # ----------------------------------------
+    # 1. Find user by UUID
+    # ----------------------------------------
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # ----------------------------------------
+    # 2. Find employee via email
+    # ----------------------------------------
+    employee = await db.employees.find_one(
+        {"email": user["email"]},
+        {"_id": 0}
+    )
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
-    
-    # Validate role
-    if role_data.role not in [UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE]:
+
+    # ----------------------------------------
+    # 3. Validate role
+    # ----------------------------------------
+    if role_data.role not in [
+        UserRole.ADMIN,
+        UserRole.MANAGER,
+        UserRole.EMPLOYEE
+    ]:
         raise HTTPException(status_code=400, detail="Invalid role")
-    
-    # Update role in both users and employees collections
+
+    # ----------------------------------------
+    # 4. Prevent admin self-demotion (IMPORTANT)
+    # ----------------------------------------
+    if (
+        user["role"] == UserRole.ADMIN
+        and role_data.role != UserRole.ADMIN
+        and current_user.email == user["email"]
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Admin cannot change their own role"
+        )
+
+    # ----------------------------------------
+    # 5. Update BOTH collections
+    # ----------------------------------------
     await db.users.update_one(
-        {"email": employee['email']},
+        {"id": user_id},
         {"$set": {"role": role_data.role}}
     )
-    
+
     await db.employees.update_one(
-        {"employee_id": employee_id},
+        {"email": user["email"]},
         {"$set": {"role": role_data.role}}
     )
-    
-    return {"message": f"Role updated to {role_data.role}", "employee_id": employee_id, "new_role": role_data.role}
+
+    return {
+        "message": "Role updated successfully",
+        "employee_id": employee["id"],
+        "new_role": role_data.role
+    }
+
 
 @api_router.delete("/employees/{employee_id}")
 async def delete_employee(
@@ -880,68 +1147,64 @@ class LeaveBalanceAdjustment(BaseModel):
     reason: str
 
 class CompOffGrant(BaseModel):
-    employee_id: str
-    employee_email: EmailStr
-    employee_name: str
+    user_id: str
     days: float
-    work_date: str
+    work_date: date
     reason: str
-    granted_by: EmailStr
-    granted_by_role: str
 
-@api_router.put("/employees/{employee_id}/leave-balance")
-async def adjust_leave_balance(
-    employee_id: str,
-    adjustment_data: LeaveBalanceAdjustment,
-    current_user: UserPublic = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
-):
-    # Check if employee exists
-    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
-    if not employee:
-        raise HTTPException(status_code=404, detail="Employee not found")
+# @api_router.put("/employees/{employee_id}/leave-balance")
+# async def adjust_leave_balance(
+#     employee_id: str,
+#     adjustment_data: LeaveBalanceAdjustment,
+#     current_user: UserPublic = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
+# ):
+#     # Check if employee exists
+#     employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
+#     if not employee:
+#         raise HTTPException(status_code=404, detail="Employee not found")
     
-    # Validate leave type key
-    valid_keys = ['sick_leave', 'casual_leave', 'paid_leave', 'unpaid_leave']
-    if adjustment_data.leave_type not in valid_keys:
-        raise HTTPException(status_code=400, detail="Invalid leave type")
+#     # Validate leave type key
+#     valid_keys = ['sick_leave', 'casual_leave', 'paid_leave', 'unpaid_leave']
+#     if adjustment_data.leave_type not in valid_keys:
+#         raise HTTPException(status_code=400, detail="Invalid leave type")
     
-    # Get current balance
-    current_balance = employee.get('leave_balance', {}).get(adjustment_data.leave_type, 0)
-    new_balance = current_balance + adjustment_data.adjustment
+#     # Get current balance
+#     current_balance = employee.get('leave_balance', {}).get(adjustment_data.leave_type, 0)
+#     new_balance = current_balance + adjustment_data.adjustment
     
-    # Prevent negative balance
-    if new_balance < 0:
-        raise HTTPException(status_code=400, detail="Cannot deduct more than available balance")
+#     # Prevent negative balance
+#     if new_balance < 0:
+#         raise HTTPException(status_code=400, detail="Cannot deduct more than available balance")
     
-    # Update balance
-    await db.employees.update_one(
-        {"employee_id": employee_id},
-        {"$set": {f"leave_balance.{adjustment_data.leave_type}": new_balance}}
-    )
+#     # Update balance
+#     await db.employees.update_one(
+#         {"employee_id": employee_id},
+#         {"$set": {f"leave_balance.{adjustment_data.leave_type}": new_balance}}
+#     )
     
-    # Log the adjustment (optional - for audit trail)
-    adjustment_log = {
-        "employee_id": employee_id,
-        "employee_email": employee['email'],
-        "leave_type": adjustment_data.leave_type,
-        "adjustment": adjustment_data.adjustment,
-        "reason": adjustment_data.reason,
-        "adjusted_by": current_user.email,
-        "adjusted_by_role": current_user.role,
-        "previous_balance": current_balance,
-        "new_balance": new_balance,
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
-    await db.leave_adjustments.insert_one(adjustment_log)
+#     # Log the adjustment (optional - for audit trail)
+#     adjustment_log = {
+#         "employee_id": employee_id,
+#         "employee_email": employee['email'],
+#         "leave_type": adjustment_data.leave_type,
+#         "adjustment": adjustment_data.adjustment,
+#         "reason": adjustment_data.reason,
+#         "adjusted_by": current_user.email,
+#         "adjusted_by_role": current_user.role,
+#         "previous_balance": current_balance,
+#         "new_balance": new_balance,
+#         "timestamp": datetime.now(timezone.utc).isoformat()
+#     }
+#     await db.leave_adjustments.insert_one(adjustment_log)
     
-    return {
-        "message": "Leave balance adjusted successfully",
-        "employee_id": employee_id,
-        "leave_type": adjustment_data.leave_type,
-        "previous_balance": current_balance,
-        "adjustment": adjustment_data.adjustment,
-        "new_balance": new_balance
-    }
+#     return {
+#         "message": "Leave balance adjusted successfully",
+#         "employee_id": employee_id,
+#         "leave_type": adjustment_data.leave_type,
+#         "previous_balance": current_balance,
+#         "adjustment": adjustment_data.adjustment,
+#         "new_balance": new_balance
+#     }
 
 class EmployeeIdSettings(BaseModel):
     prefix: str = "EMP"
@@ -1347,34 +1610,74 @@ async def grant_comp_off(
     comp_off_data: CompOffGrant,
     current_user: UserPublic = Depends(require_role([UserRole.ADMIN, UserRole.MANAGER]))
 ):
-    # Verify employee exists
-    employee = await db.employees.find_one({"id": comp_off_data.employee_id}, {"_id": 0})
+    # ------------------------------------------------
+    # 1. Find USER
+    # ------------------------------------------------
+    user = await db.users.find_one({"id": comp_off_data.user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    employee = await db.employees.find_one(
+        {"email": user["email"]},
+        {"_id": 0}
+    )
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
-    
-    # Create comp-off record
+
+    # ------------------------------------------------
+    # 2. Normalize work_date
+    # ------------------------------------------------
+    work_date = (
+        datetime.fromisoformat(comp_off_data.work_date)
+        if isinstance(comp_off_data.work_date, str)
+        else datetime.combine(comp_off_data.work_date, datetime.min.time())
+    )
+
+    if comp_off_data.days <= 0:
+        raise HTTPException(status_code=400, detail="Days must be > 0")
+
+    # ------------------------------------------------
+    # 3. Insert COMP-OFF RECORD
+    # ------------------------------------------------
     comp_off_record = {
         "id": str(uuid.uuid4()),
-        "employee_id": comp_off_data.employee_id,
-        "employee_email": comp_off_data.employee_email,
-        "employee_name": comp_off_data.employee_name,
+        "user_id": comp_off_data.user_id,
+        "employee_id": employee["employee_id"],
+        "employee_email": employee["email"],
+        "employee_name": employee["full_name"],
         "days": comp_off_data.days,
         "used": 0,
-        "work_date": comp_off_data.work_date,
+        "work_date": work_date.isoformat(),
         "reason": comp_off_data.reason,
-        "granted_by": comp_off_data.granted_by,
-        "granted_by_role": comp_off_data.granted_by_role,
-        "granted_date": datetime.now(timezone.utc).isoformat(),
-        "expiry_date": (datetime.now(timezone.utc) + timedelta(days=90)).isoformat()  # 90 days validity
+        "granted_by": current_user.email,
+        "granted_by_role": current_user.role,
+        "granted_date": datetime.now(timezone.utc),
+        "expiry_date": datetime.now(timezone.utc) + timedelta(days=90)
     }
-    
+
     await db.comp_off_records.insert_one(comp_off_record)
-    
+
+    # ------------------------------------------------
+    # 4. 🔥 UPDATE LEAVE BALANCE (THIS WAS MISSING)
+    # ------------------------------------------------
+    # await db.employees.update_one(
+    #     {"email": employee["email"]},
+    #     {
+    #         "$inc": {
+    #             "leave_balance.comp_off": comp_off_data.days
+    #         }
+    #     }
+    # )
+
+    # ------------------------------------------------
+    # 5. RETURN
+    # ------------------------------------------------
     return {
         "message": "Comp-off granted successfully",
-        "comp_off_id": comp_off_record["id"],
-        "days": comp_off_data.days
+        "employee": employee["full_name"],
+        "added_days": comp_off_data.days
     }
+
 
 @api_router.get("/comp-off/records")
 async def get_comp_off_records(
@@ -1382,6 +1685,7 @@ async def get_comp_off_records(
 ):
     records = await db.comp_off_records.find({}, {"_id": 0}).to_list(1000)
     return records
+
 
 # ============= SALARY TEMPLATE ENDPOINTS =============
 

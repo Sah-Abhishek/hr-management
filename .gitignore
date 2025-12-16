@@ -16,8 +16,8 @@ frontend/.env
 !frontend/.env.production
 
 # Dependencies
-node_modules/
-__pycache__/
+frontend/node_modules/
+backend/__pycache__/
 *.pyc
 *.pyo
 *.pyd

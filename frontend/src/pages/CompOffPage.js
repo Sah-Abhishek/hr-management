@@ -92,30 +92,36 @@ const CompOffPage = () => {
 
     try {
       await api.post('/comp-off/grant', {
-        employee_id: selectedEmployee.id,
-        employee_email: selectedEmployee.email,
-        employee_name: selectedEmployee.full_name,
+        user_id: selectedEmployee.id, // ✅ USER UUID
         days: parseFloat(compOffForm.days),
         work_date: compOffForm.work_date,
         reason: compOffForm.reason,
-        granted_by: user?.email,
-        granted_by_role: user?.role,
       });
 
-      toast.success(`Granted ${compOffForm.days} comp-off day(s) to ${selectedEmployee.full_name}`);
+      toast.success(
+        `Granted ${compOffForm.days} comp-off day(s) to ${selectedEmployee.full_name}`
+      );
+
       setGrantDialogOpen(false);
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to grant comp-off');
+      toast.error(
+        error.response?.data?.detail || 'Failed to grant comp-off'
+      );
     }
   };
 
   const getEmployeeCompOff = (employeeId) => {
-    const records = compOffRecords.filter(r => r.employee_id === employeeId);
+    const records = compOffRecords.filter(
+      r => r.employee_id === employeeId
+    );
+
     const total = records.reduce((sum, r) => sum + (r.days || 0), 0);
     const used = records.reduce((sum, r) => sum + (r.used || 0), 0);
+
     return { total, used, available: total - used };
   };
+
 
   if (loading) {
     return (
@@ -167,7 +173,7 @@ const CompOffPage = () => {
       {/* Employee Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {filteredEmployees.map((employee) => {
-          const compOffBalance = getEmployeeCompOff(employee.id);
+          const compOffBalance = getEmployeeCompOff(employee.employee_id);
           const employeeRecords = compOffRecords.filter(r => r.employee_id === employee.id);
 
           return (
