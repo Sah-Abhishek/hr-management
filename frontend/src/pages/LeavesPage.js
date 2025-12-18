@@ -59,15 +59,34 @@ const LeavesPage = () => {
     }
   };
 
+  const handleEndDateChange = (e) => {
+    const newEndDate = e.target.value;
+
+    if (leaveForm.start_date && newEndDate < leaveForm.start_date) {
+      toast.error('End date cannot be before start date');
+    }
+
+    setLeaveForm({ ...leaveForm, end_date: newEndDate });
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Date validation
+    const startDate = new Date(leaveForm.start_date);
+    const endDate = new Date(leaveForm.end_date);
+
+    if (endDate < startDate) {
+      toast.error('End date cannot be before start date');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       const payload = {
         ...leaveForm,
-        start_date: new Date(leaveForm.start_date).toISOString(),
-        end_date: new Date(leaveForm.end_date).toISOString(),
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
       };
 
       await api.post('/leaves', payload);
@@ -177,7 +196,8 @@ const LeavesPage = () => {
                     data-testid="end-date-input"
                     type="date"
                     value={leaveForm.end_date}
-                    onChange={(e) => setLeaveForm({ ...leaveForm, end_date: e.target.value })}
+                    min={leaveForm.start_date}  // HTML5 native validation
+                    onChange={handleEndDateChange}
                     required
                     className="mt-1"
                   />

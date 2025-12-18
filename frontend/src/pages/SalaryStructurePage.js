@@ -17,7 +17,7 @@ const SalaryStructurePage = () => {
   const [sending, setSending] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [salaryTemplate, setSalaryTemplate] = useState(null);
-  
+
   const [salaryStructure, setSalaryStructure] = useState({
     basic_salary: 0,
     components: []
@@ -47,11 +47,13 @@ const SalaryStructurePage = () => {
   };
 
   const handleEmployeeChange = async (empId) => {
+    console.log("This is the empId: ", empId)
     setSelectedEmployee(empId);
     setLoading(true);
-    
+
     try {
       const response = await api.get(`/salary-structure/${empId}`);
+      console.log("This is the response from the backend: ", response.data)
       if (response.data) {
         // Employee already has a saved structure
         setSalaryStructure({
@@ -62,7 +64,7 @@ const SalaryStructurePage = () => {
         // No saved structure - initialize with template
         const employee = employees.find(e => e.id === empId);
         const basicSalary = employee?.monthly_salary || 0;
-        
+
         // Create components from template
         let initialComponents = [];
         if (salaryTemplate) {
@@ -78,7 +80,7 @@ const SalaryStructurePage = () => {
               }))
             );
           }
-          
+
           // Add deductions from template
           if (salaryTemplate.deductions) {
             initialComponents = initialComponents.concat(
@@ -92,7 +94,7 @@ const SalaryStructurePage = () => {
             );
           }
         }
-        
+
         setSalaryStructure({
           basic_salary: basicSalary,
           components: initialComponents
@@ -103,7 +105,7 @@ const SalaryStructurePage = () => {
       // On error, still try to initialize with template
       const employee = employees.find(e => e.id === empId);
       const basicSalary = employee?.monthly_salary || 0;
-      
+
       let initialComponents = [];
       if (salaryTemplate) {
         if (salaryTemplate.earnings) {
@@ -117,7 +119,7 @@ const SalaryStructurePage = () => {
             }))
           );
         }
-        
+
         if (salaryTemplate.deductions) {
           initialComponents = initialComponents.concat(
             salaryTemplate.deductions.map(deduction => ({
@@ -130,7 +132,7 @@ const SalaryStructurePage = () => {
           );
         }
       }
-      
+
       setSalaryStructure({
         basic_salary: basicSalary,
         components: initialComponents
@@ -256,8 +258,8 @@ const SalaryStructurePage = () => {
             <div className="text-sm text-blue-900">
               <p className="font-semibold mb-1">About Salary Components</p>
               <p>
-                When you select an employee for the first time, the system automatically loads the 
-                <strong> Salary Template</strong> (defined in Settings → Salary Template). 
+                When you select an employee for the first time, the system automatically loads the
+                <strong> Salary Template</strong> (defined in Settings → Salary Template).
                 You can then customize the amounts for each component specific to this employee.
               </p>
             </div>
@@ -315,7 +317,7 @@ const SalaryStructurePage = () => {
                         Add Earning
                       </Button>
                     </div>
-                    
+
                     {salaryStructure.components.filter(c => c.type === 'earning').map((comp, idx) => {
                       const actualIdx = salaryStructure.components.indexOf(comp);
                       return (
@@ -378,7 +380,7 @@ const SalaryStructurePage = () => {
                         Add Deduction
                       </Button>
                     </div>
-                    
+
                     {salaryStructure.components.filter(c => c.type === 'deduction').map((comp, idx) => {
                       const actualIdx = salaryStructure.components.indexOf(comp);
                       return (

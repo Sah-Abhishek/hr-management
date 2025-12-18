@@ -1,4 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi import Body
+from fastapi.encoders import jsonable_encoder
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -63,6 +65,26 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # ============= MODELS =============
+
+class LeaveEdit(BaseModel):
+    leave_type: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    reason: Optional[str] = None
+    is_half_day: Optional[bool] = None
+    half_day_period: Optional[str] = None
+    status: Optional[str] = None
+
+class LeavePolicyItem(BaseModel):
+    leave_type: str
+    annual_quota: float  # days per year
+    order: int = 0
+
+class LeavePolicy(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    policies: List[LeavePolicyItem] = []
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_by: Optional[str] = None
 
 class UserDB(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -185,6 +207,7 @@ class EmployeeCreate(BaseModel):
 class Employee(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employee_id: str                 # <--- add this
     email: EmailStr
     full_name: str
     role: str
@@ -374,6 +397,311 @@ def calculate_days(start_date: datetime, end_date: datetime, is_half_day: bool =
         return 0.5
     return float(days)
 
+# ============= Leave edit endpoint by admin =============
+
+
+@api_router.put("/leaves/{leave_id}", response_model=Leave)
+async def edit_leave(
+    leave_id: str,
+    edit_data: LeaveEdit,
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
+):
+    """
+    Admin endpoint to edit leave details.
+    Can modify leave type, dates, reason, status, etc.
+    Handles leave balance adjustments if needed.
+    """
+    # Fetch existing leave
+    leave_doc = await db.leaves.find_one({"id": leave_id}, {"_id": 0})
+    if not leave_doc:
+        raise HTTPException(status_code=404, detail="Leave not found")
+    
+    # Convert dates in existing document
+    for field in ['start_date', 'end_date', 'created_at', 'updated_at']:
+        if isinstance(leave_doc.get(field), str):
+            leave_doc[field] = datetime.fromisoformat(leave_doc[field])
+    for approval in leave_doc.get('approvals', []):
+        if isinstance(approval.get('timestamp'), str):
+            approval['timestamp'] = datetime.fromisoformat(approval['timestamp'])
+    
+    original_leave = Leave(**leave_doc)
+    
+    # Track what's changing for leave balance adjustment
+    was_approved = original_leave.status == LeaveStatus.APPROVED
+    original_days = original_leave.days_count
+    original_leave_type = original_leave.leave_type
+    
+    # Build update dictionary
+    update_dict = {}
+    incoming = edit_data.model_dump(exclude_unset=True)
+    
+    # Update basic fields
+    if 'leave_type' in incoming:
+        update_dict['leave_type'] = incoming['leave_type']
+    
+    if 'reason' in incoming:
+        update_dict['reason'] = incoming['reason']
+    
+    if 'is_half_day' in incoming:
+        update_dict['is_half_day'] = incoming['is_half_day']
+    
+    if 'half_day_period' in incoming:
+        update_dict['half_day_period'] = incoming['half_day_period']
+    
+    # Handle date changes
+    new_start = incoming.get('start_date', original_leave.start_date)
+    new_end = incoming.get('end_date', original_leave.end_date)
+    is_half_day = incoming.get('is_half_day', original_leave.is_half_day)
+    
+    if 'start_date' in incoming or 'end_date' in incoming:
+        update_dict['start_date'] = new_start
+        update_dict['end_date'] = new_end
+        # Recalculate days count
+        new_days = calculate_days(new_start, new_end, is_half_day)
+        update_dict['days_count'] = new_days
+    else:
+        new_days = original_days
+    
+    # Handle status change
+    new_status = incoming.get('status', original_leave.status)
+    if 'status' in incoming:
+        update_dict['status'] = new_status
+        
+        # Add approval record for status change
+        approval_record = {
+            'approver_email': current_user.email,
+            'approver_name': current_user.full_name,
+            'approver_role': current_user.role,
+            'action': 'edited',
+            'comments': f'Status changed to {new_status} by admin',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Append to existing approvals
+        existing_approvals = leave_doc.get('approvals', [])
+        for appr in existing_approvals:
+            if isinstance(appr.get('timestamp'), datetime):
+                appr['timestamp'] = appr['timestamp'].isoformat()
+        existing_approvals.append(approval_record)
+        update_dict['approvals'] = existing_approvals
+    
+    # Update timestamp
+    update_dict['updated_at'] = datetime.now(timezone.utc)
+    
+    # ============================================
+    # LEAVE BALANCE ADJUSTMENTS (CRITICAL LOGIC)
+    # ============================================
+    new_leave_type = update_dict.get('leave_type', original_leave_type)
+    employee_email = original_leave.employee_email
+    
+    # Case 1: Leave was approved and is now being modified
+    if was_approved and original_leave_type != LeaveType.UNPAID_LEAVE:
+        original_key = original_leave_type.lower().replace(' ', '_')
+        
+        # If status is being changed FROM approved to something else
+        if new_status != LeaveStatus.APPROVED:
+            # Refund the original days
+            await db.employees.update_one(
+                {"email": employee_email},
+                {"$inc": {f"leave_balance.{original_key}": original_days}}
+            )
+            logger.info(f"Refunded {original_days} {original_key} days to {employee_email}")
+        
+        # If leave type changed but still approved
+        elif new_leave_type != original_leave_type:
+            # Refund original type
+            await db.employees.update_one(
+                {"email": employee_email},
+                {"$inc": {f"leave_balance.{original_key}": original_days}}
+            )
+            
+            # Deduct from new type (if not unpaid)
+            if new_leave_type != LeaveType.UNPAID_LEAVE:
+                new_key = new_leave_type.lower().replace(' ', '_')
+                await db.employees.update_one(
+                    {"email": employee_email},
+                    {"$inc": {f"leave_balance.{new_key}": -new_days}}
+                )
+            logger.info(f"Switched leave type from {original_leave_type} to {new_leave_type}")
+        
+        # If days changed but same type and still approved
+        elif new_days != original_days:
+            days_diff = new_days - original_days
+            await db.employees.update_one(
+                {"email": employee_email},
+                {"$inc": {f"leave_balance.{original_key}": -days_diff}}
+            )
+            logger.info(f"Adjusted {original_key} by {-days_diff} days")
+    
+    # Case 2: Leave was NOT approved but is now being APPROVED
+    elif not was_approved and new_status == LeaveStatus.APPROVED:
+        if new_leave_type != LeaveType.UNPAID_LEAVE:
+            new_key = new_leave_type.lower().replace(' ', '_')
+            
+            # Check balance before deducting
+            employee = await db.employees.find_one(
+                {"email": employee_email},
+                {"_id": 0, "leave_balance": 1}
+            )
+            available = employee.get('leave_balance', {}).get(new_key, 0)
+            
+            if available < new_days:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Insufficient {new_leave_type} balance. Available: {available}, Required: {new_days}"
+                )
+            
+            await db.employees.update_one(
+                {"email": employee_email},
+                {"$inc": {f"leave_balance.{new_key}": -new_days}}
+            )
+            logger.info(f"Deducted {new_days} {new_key} days from {employee_email}")
+    
+    # ============================================
+    # UPDATE LEAVE DOCUMENT
+    # ============================================
+    
+    # Convert datetimes to ISO strings for MongoDB
+    if 'start_date' in update_dict:
+        update_dict['start_date'] = update_dict['start_date'].isoformat() if isinstance(update_dict['start_date'], datetime) else update_dict['start_date']
+    if 'end_date' in update_dict:
+        update_dict['end_date'] = update_dict['end_date'].isoformat() if isinstance(update_dict['end_date'], datetime) else update_dict['end_date']
+    if 'updated_at' in update_dict:
+        update_dict['updated_at'] = update_dict['updated_at'].isoformat() if isinstance(update_dict['updated_at'], datetime) else update_dict['updated_at']
+    
+    await db.leaves.update_one(
+        {"id": leave_id},
+        {"$set": update_dict}
+    )
+    
+    # ============================================
+    # LOG THE EDIT
+    # ============================================
+    await db.leave_edit_logs.insert_one({
+        "leave_id": leave_id,
+        "edited_by": current_user.email,
+        "original_data": {
+            "leave_type": original_leave_type,
+            "start_date": original_leave.start_date.isoformat(),
+            "end_date": original_leave.end_date.isoformat(),
+            "days_count": original_days,
+            "status": original_leave.status
+        },
+        "changes": incoming,
+        "timestamp": datetime.now(timezone.utc)
+    })
+    
+    # ============================================
+    # SEND NOTIFICATION TO EMPLOYEE
+    # ============================================
+    try:
+        employee = await db.employees.find_one(
+            {"email": employee_email},
+            {"_id": 0}
+        )
+        
+        if employee:
+            changes_text = []
+            if 'leave_type' in incoming:
+                changes_text.append(f"Leave type: {original_leave_type} → {new_leave_type}")
+            if 'start_date' in incoming or 'end_date' in incoming:
+                changes_text.append(f"Dates updated")
+            if 'status' in incoming:
+                changes_text.append(f"Status: {original_leave.status} → {new_status}")
+            
+            email_html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+                    <h2 style="color: #1e293b; border-bottom: 3px solid #3b82f6; padding-bottom: 10px;">Leave Application Updated</h2>
+                    <p>Hello <strong>{employee['full_name']}</strong>,</p>
+                    <p>Your leave application has been updated by an administrator.</p>
+                    
+                    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <h3 style="margin-top: 0;">Changes Made:</h3>
+                        <ul>
+                            {''.join(f'<li>{change}</li>' for change in changes_text)}
+                        </ul>
+                    </div>
+                    
+                    <p style="color: #64748b; font-size: 12px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                        This is an automated notification from HRMS Leave Management System.
+                    </p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            await send_email_notification(
+                to_email=employee_email,
+                subject="Leave Application Updated",
+                html_content=email_html
+            )
+    except Exception as e:
+        logger.error(f"Failed to send leave edit notification: {str(e)}")
+    
+    # ============================================
+    # RETURN UPDATED LEAVE
+    # ============================================
+    updated_leave = await db.leaves.find_one({"id": leave_id}, {"_id": 0})
+    
+    for field in ['start_date', 'end_date', 'created_at', 'updated_at']:
+        if isinstance(updated_leave.get(field), str):
+            updated_leave[field] = datetime.fromisoformat(updated_leave[field])
+    for approval in updated_leave.get('approvals', []):
+        if isinstance(approval.get('timestamp'), str):
+            approval['timestamp'] = datetime.fromisoformat(approval['timestamp'])
+    
+    return Leave(**updated_leave)
+
+
+# ============================================
+# ADDITIONAL: DELETE LEAVE ENDPOINT
+# ============================================
+
+@api_router.delete("/leaves/{leave_id}")
+async def delete_leave(
+    leave_id: str,
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
+):
+    """
+    Admin endpoint to delete a leave application.
+    Refunds leave balance if the leave was approved.
+    """
+    # Fetch leave
+    leave_doc = await db.leaves.find_one({"id": leave_id}, {"_id": 0})
+    if not leave_doc:
+        raise HTTPException(status_code=404, detail="Leave not found")
+    
+    # Refund balance if was approved
+    if leave_doc['status'] == LeaveStatus.APPROVED:
+        leave_type_key = leave_doc['leave_type'].lower().replace(' ', '_')
+        if leave_doc['leave_type'] != LeaveType.UNPAID_LEAVE:
+            await db.employees.update_one(
+                {"email": leave_doc['employee_email']},
+                {"$inc": {f"leave_balance.{leave_type_key}": leave_doc['days_count']}}
+            )
+            logger.info(f"Refunded {leave_doc['days_count']} days for deleted leave")
+    
+    # Delete the leave
+    await db.leaves.delete_one({"id": leave_id})
+    
+    # Log deletion
+    await db.leave_edit_logs.insert_one({
+        "leave_id": leave_id,
+        "action": "deleted",
+        "deleted_by": current_user.email,
+        "leave_data": leave_doc,
+        "timestamp": datetime.now(timezone.utc)
+    })
+    
+    return {
+        "status": "success",
+        "message": "Leave deleted successfully",
+        "leave_id": leave_id
+    }
+
+
 # ============= AUTH ENDPOINTS =============
 
 @api_router.post("/auth/register", response_model=Token)
@@ -474,6 +802,131 @@ async def register(user_data: UserRegister):
         user=user
     )
 
+
+@api_router.get("/leave-policy")
+async def get_leave_policy(
+    current_user: UserPublic = Depends(get_current_user)
+):
+    """Get current leave policy"""
+    policy = await db.leave_policies.find_one({}, {"_id": 0})
+    
+    if not policy:
+        # Return default policy
+        return {
+            "id": "default_policy",
+            "policies": [
+                {"leave_type": "Sick Leave", "annual_quota": 12, "order": 1},
+                {"leave_type": "Casual Leave", "annual_quota": 12, "order": 2},
+                {"leave_type": "Paid Leave", "annual_quota": 15, "order": 3},
+                {"leave_type": "Unpaid Leave", "annual_quota": 0, "order": 4}
+            ],
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+    
+    # Convert datetime if needed
+    if isinstance(policy.get('updated_at'), str):
+        policy['updated_at'] = datetime.fromisoformat(policy['updated_at'])
+    
+    return policy
+
+@api_router.post("/leave-policy")
+async def save_leave_policy(
+    policy_data: dict = Body(...),
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
+):
+    print("Received policy_data:", policy_data)
+
+    try:
+        policy = {
+            "id": "default_policy",
+            "policies": policy_data.get('policies', []),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_by": current_user.email
+        }
+
+        # Save to DB
+        await db.leave_policies.delete_many({})
+        await db.leave_policies.insert_one(policy)
+        print("Saved policy to DB")
+
+        # Remove _id for response
+        policy.pop('_id', None)
+
+        return {"status": "success", "message": "Leave policy updated successfully", "policy": policy}
+    except Exception as e:
+        print(f"Failed to save leave policy: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/leave-policy/apply-to-employee/{employee_id}")
+async def apply_policy_to_employee(
+    employee_id: str,
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
+):
+    """Apply current leave policy to a specific employee"""
+    try:
+        # Get current policy
+        policy = await db.leave_policies.find_one({}, {"_id": 0})
+        if not policy:
+            raise HTTPException(status_code=404, detail="Leave policy not configured")
+        
+        # Find employee
+        employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
+        if not employee:
+            raise HTTPException(status_code=404, detail="Employee not found")
+        
+        # Build new leave balance from policy
+        new_balance = {}
+        for policy_item in policy.get('policies', []):
+            leave_key = policy_item['leave_type'].lower().replace(' ', '_')
+            new_balance[leave_key] = policy_item['annual_quota']
+        
+        # Update employee's leave balance
+        await db.employees.update_one(
+            {"employee_id": employee_id},
+            {"$set": {"leave_balance": new_balance}}
+        )
+        
+        return {
+            "status": "success",
+            "message": f"Leave policy applied to {employee['full_name']}",
+            "new_balance": new_balance
+        }
+    except Exception as e:
+        logger.error(f"Failed to apply policy: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/leave-policy/apply-to-all")
+async def apply_policy_to_all_employees(
+    current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
+):
+    """Apply current leave policy to all employees"""
+    try:
+        # Get current policy
+        policy = await db.leave_policies.find_one({}, {"_id": 0})
+        if not policy:
+            raise HTTPException(status_code=404, detail="Leave policy not configured")
+        
+        # Build new leave balance from policy
+        new_balance = {}
+        for policy_item in policy.get('policies', []):
+            leave_key = policy_item['leave_type'].lower().replace(' ', '_')
+            new_balance[leave_key] = policy_item['annual_quota']
+        
+        # Update all employees
+        result = await db.employees.update_many(
+            {},
+            {"$set": {"leave_balance": new_balance}}
+        )
+        
+        return {
+            "status": "success",
+            "message": f"Leave policy applied to {result.modified_count} employees",
+            "new_balance": new_balance,
+            "employees_updated": result.modified_count
+        }
+    except Exception as e:
+        logger.error(f"Failed to apply policy to all: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/auth/login", response_model=Token)
 async def login(credentials: UserLogin):
@@ -664,9 +1117,13 @@ async def get_all_employees(
     employees = await db.employees.find({}, {"_id": 0}).to_list(1000)
     
     for emp in employees:
+        # Convert dates from ISO string to datetime if needed
         for field in ['joining_date', 'created_at']:
             if isinstance(emp.get(field), str):
                 emp[field] = datetime.fromisoformat(emp[field])
+        
+        # Set `id` to `employee_id` for frontend
+        emp['id'] = emp['employee_id']
     
     return employees
 
@@ -801,7 +1258,7 @@ async def update_employee(
     # --------------------------------------------------
     # 1. Find USER
     # --------------------------------------------------
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    user = await db.users.find_one({"employee_id": user_id}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -827,7 +1284,8 @@ async def update_employee(
         "designation",
         "phone",
         "organization_id",
-        "manager_email"
+        "manager_email",
+        "monthly_salary"
     }
 
     incoming = update_data.model_dump(exclude_unset=True)
@@ -879,7 +1337,7 @@ async def update_employee(
         # --------------------------------------------------
         user_sync_fields = {
             k: update_dict[k]
-            for k in ["full_name", "department", "designation", "phone", "organization_id"]
+            for k in ["full_name", "department", "designation", "phone", "organization_id", "monthly_salary"]
             if k in update_dict
         }
 
@@ -1067,9 +1525,9 @@ async def update_employee_role(
     current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
     # ----------------------------------------
-    # 1. Find user by UUID
+    # 1. Find user by employee_id
     # ----------------------------------------
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    user = await db.users.find_one({"employee_id": user_id}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -1094,7 +1552,7 @@ async def update_employee_role(
         raise HTTPException(status_code=400, detail="Invalid role")
 
     # ----------------------------------------
-    # 4. Prevent admin self-demotion (IMPORTANT)
+    # 4. Prevent admin self-demotion
     # ----------------------------------------
     if (
         user["role"] == UserRole.ADMIN
@@ -1107,21 +1565,23 @@ async def update_employee_role(
         )
 
     # ----------------------------------------
-    # 5. Update BOTH collections
+    # 5. Update BOTH collections (FIXED)
     # ----------------------------------------
+    # Update users table - use employee_id to find the document
     await db.users.update_one(
-        {"id": user_id},
+        {"employee_id": user_id},  # FIXED: was {"id": user_id}
         {"$set": {"role": role_data.role}}
     )
 
+    # Update employees table
     await db.employees.update_one(
-        {"email": user["email"]},
+        {"employee_id": user_id},  # Also use employee_id for consistency
         {"$set": {"role": role_data.role}}
     )
 
     return {
         "message": "Role updated successfully",
-        "employee_id": employee["id"],
+        "employee_id": user_id,
         "new_role": role_data.role
     }
 
@@ -1613,7 +2073,7 @@ async def grant_comp_off(
     # ------------------------------------------------
     # 1. Find USER
     # ------------------------------------------------
-    user = await db.users.find_one({"id": comp_off_data.user_id}, {"_id": 0})
+    user = await db.users.find_one({"employee_id": comp_off_data.user_id}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -1746,6 +2206,7 @@ async def save_salary_structure(
     structure: dict,
     current_user: UserPublic = Depends(require_role([UserRole.ADMIN]))
 ):
+    print("This is the emp Id:", employee_id)
     """Save salary structure for an employee"""
     employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
     if not employee:
@@ -1783,13 +2244,16 @@ async def save_salary_structure(
     
     # Update or insert
     await db.salary_structures.delete_many({"employee_id": employee_id})
-    await db.salary_structures.insert_one(salary_data)
+    result = await db.salary_structures.insert_one(salary_data)
     
     # Update employee's monthly_salary
     await db.employees.update_one(
         {"employee_id": employee_id},
         {"$set": {"monthly_salary": salary_data['net_salary']}}
     )
+    
+    # Remove the MongoDB _id from the response or convert it to string
+    salary_data.pop('_id', None)  # Remove _id if it exists
     
     return {"status": "success", "structure": salary_data}
 
@@ -2536,7 +3000,7 @@ def generate_leave_application_email(employee_name: str, leave_type: str, start_
 
 def generate_leave_approval_email(employee_name: str, leave_type: str, start_date: str, end_date: str, status: str):
     """Generate HTML email for leave approval/rejection"""
-    is_approved = status.lower() == "approved"
+    is_approved = "approved" in status.lower()
     status_color = "#10b981" if is_approved else "#ef4444"
     status_text = "Approved" if is_approved else "Rejected"
     

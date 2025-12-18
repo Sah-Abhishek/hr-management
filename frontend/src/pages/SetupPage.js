@@ -18,13 +18,19 @@ const SetupPage = ({ onSetupComplete }) => {
   // Database configuration
   const [dbConfig, setDbConfig] = useState({
     mongo_url: '',
-    db_name: 'hrms_production',
+    db_name: 'hrms',
     pem_certificate: ''
   });
 
   // Server configuration
+  // const [serverConfig, setServerConfig] = useState({
+  //   server_ip: '103.142.175.170',
+  //   backend_port: '9001',
+  //   frontend_port: '9000',
+  //   jwt_secret: ''
+  // });
   const [serverConfig, setServerConfig] = useState({
-    server_ip: '103.142.175.170',
+    server_ip: '0.0.0.0',
     backend_port: '9001',
     frontend_port: '9000',
     jwt_secret: ''

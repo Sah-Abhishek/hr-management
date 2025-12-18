@@ -77,16 +77,17 @@ const AllLeavesPage = () => {
 
   const handleUpdateLeave = async () => {
     try {
-      // Calculate new days count
-      const start = new Date(selectedLeave.start_date);
-      const end = new Date(selectedLeave.end_date);
-      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-      
-      // For now, we'll create a note - you can extend backend to support leave updates
-      toast.success('Leave details noted. Contact developer to implement backend update.');
+      await api.put(`/leaves/${selectedLeave.id}`, {
+        leave_type: selectedLeave.leave_type,
+        start_date: selectedLeave.start_date,
+        end_date: selectedLeave.end_date,
+        reason: selectedLeave.reason,
+      });
+      toast.success('Leave updated successfully');
       setEditDialogOpen(false);
+      fetchAllLeaves();
     } catch (error) {
-      toast.error('Failed to update leave');
+      toast.error(error.response?.data?.detail || 'Failed to update leave');
     }
   };
 

@@ -1,4 +1,4 @@
-#!/root/workspace/hrm/brain_hrms/backend/venv/bin/python3
+#!/home/abhishek/Documents/brainwave-dir/hrms/brain_hrms/backend/venv/bin/python3
 
 import sys
 import json

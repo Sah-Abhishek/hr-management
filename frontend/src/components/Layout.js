@@ -11,6 +11,8 @@ const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const { user } = getAuth();
+  console.log("This is the user: ", user)
+  // console.log("This is the currentUser: ", currentUser.role)
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -53,6 +55,8 @@ const Layout = () => {
     item.roles.includes(user?.role)
   );
 
+  console.log("This is the filtered navigation: ", filteredNavigation)
+
   const isActive = (href) => {
     if (href === '/') {
       return location.pathname === '/';
@@ -81,10 +85,9 @@ const Layout = () => {
                 data-testid={`nav-${item.name.toLowerCase().replace(' ', '-')}`}
                 className={`
                   flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all
-                  ${
-                    active
-                      ? 'bg-slate-100 text-slate-900'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  ${active
+                    ? 'bg-slate-100 text-slate-900'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                   }
                 `}
               >
@@ -150,10 +153,9 @@ const Layout = () => {
                     onClick={() => setSidebarOpen(false)}
                     className={`
                       flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all
-                      ${
-                        active
-                          ? 'bg-slate-100 text-slate-900'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      ${active
+                        ? 'bg-slate-100 text-slate-900'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                       }
                     `}
                   >
