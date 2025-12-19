@@ -664,6 +664,163 @@ async def edit_leave(
     
     return Leave(**updated_leave)
 
+# ============================================
+# ADDITIONAL: RETURN LEAVES OF AN EMPLOYEE 
+# ============================================
+
+# ============= LEAVE CALENDAR ENDPOINTS =============
+@api_router.get("/leaves/calendar/{employee_id}")
+async def get_employee_leaves_for_calendar(
+    employee_id: str,
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+    current_user: UserPublic = Depends(get_current_user)
+):
+    """
+    Get leaves for an employee to display on calendar.
+    Returns leaves with type, dates, and status for color coding.
+    """
+    # Find employee
+    employee = await db.employees.find_one({"employee_id": employee_id}, {"_id": 0})
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Permission check: Admin/Manager can see anyone, employee can only see their own
+    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
+        if employee['email'] != current_user.email:
+            raise HTTPException(status_code=403, detail="Not authorized to view this employee's leaves")
+    
+    # Build query
+    query = {"employee_email": employee['email']}
+    
+    # Get all leaves first, then filter in Python (more reliable than complex MongoDB date queries)
+    leaves = await db.leaves.find(query, {"_id": 0}).sort("start_date", -1).to_list(1000)
+    
+    # Filter by year/month if provided
+    filtered_leaves = []
+    
+    if year and month:
+        import calendar
+        _, last_day = calendar.monthrange(year, month)
+        month_start = f"{year:04d}-{month:02d}-01"
+        month_end = f"{year:04d}-{month:02d}-{last_day:02d}"
+        
+        for leave in leaves:
+            # Get start and end dates as strings (YYYY-MM-DD format)
+            start_date = leave['start_date']
+            end_date = leave['end_date']
+            
+            # Convert datetime to string if needed
+            if isinstance(start_date, datetime):
+                start_str = start_date.strftime("%Y-%m-%d")
+            else:
+                start_str = start_date[:10]  # Take first 10 chars (YYYY-MM-DD)
+            
+            if isinstance(end_date, datetime):
+                end_str = end_date.strftime("%Y-%m-%d")
+            else:
+                end_str = end_date[:10]
+            
+            # Check if leave overlaps with the month
+            # Leave overlaps if: start_date <= month_end AND end_date >= month_start
+            if start_str <= month_end and end_str >= month_start:
+                filtered_leaves.append(leave)
+    
+    elif year:
+        year_start = f"{year:04d}-01-01"
+        year_end = f"{year:04d}-12-31"
+        
+        for leave in leaves:
+            start_date = leave['start_date']
+            if isinstance(start_date, datetime):
+                start_str = start_date.strftime("%Y-%m-%d")
+            else:
+                start_str = start_date[:10]
+            
+            if year_start <= start_str <= year_end:
+                filtered_leaves.append(leave)
+    else:
+        filtered_leaves = leaves
+    
+    # Process leaves for calendar display
+    calendar_events = []
+    
+    # Define colors for each leave type
+    leave_colors = {
+        "sick_leave": {"bg": "#fee2e2", "border": "#ef4444", "text": "#991b1b"},
+        "casual_leave": {"bg": "#dbeafe", "border": "#3b82f6", "text": "#1e40af"},
+        "paid_leave": {"bg": "#dcfce7", "border": "#22c55e", "text": "#166534"},
+        "unpaid_leave": {"bg": "#fef3c7", "border": "#f59e0b", "text": "#92400e"},
+        "comp_off": {"bg": "#e9d5ff", "border": "#a855f7", "text": "#6b21a8"}
+    }
+    
+    # Status colors
+    status_styles = {
+        "pending": {"opacity": "0.6", "pattern": "striped"},
+        "manager_approved": {"opacity": "0.8", "pattern": "dotted"},
+        "approved": {"opacity": "1", "pattern": "solid"},
+        "rejected": {"opacity": "0.4", "pattern": "crossed"}
+    }
+    
+    for leave in filtered_leaves:
+        # Convert dates
+        start_date = leave['start_date']
+        end_date = leave['end_date']
+        
+        if isinstance(start_date, str):
+            start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        if isinstance(end_date, str):
+            end_date = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        
+        leave_type_key = leave['leave_type'].lower().replace(' ', '_')
+        colors = leave_colors.get(leave_type_key, {"bg": "#f1f5f9", "border": "#64748b", "text": "#334155"})
+        status_style = status_styles.get(leave['status'], {"opacity": "1", "pattern": "solid"})
+        
+        calendar_events.append({
+            "id": leave['id'],
+            "title": leave['leave_type'],
+            "start": start_date.strftime("%Y-%m-%d"),
+            "end": end_date.strftime("%Y-%m-%d"),
+            "start_datetime": start_date.isoformat(),
+            "end_datetime": end_date.isoformat(),
+            "leave_type": leave['leave_type'],
+            "leave_type_key": leave_type_key,
+            "status": leave['status'],
+            "days_count": leave['days_count'],
+            "reason": leave['reason'],
+            "is_half_day": leave.get('is_half_day', False),
+            "half_day_period": leave.get('half_day_period'),
+            "colors": colors,
+            "status_style": status_style
+        })
+    
+    return {
+        "employee": {
+            "id": employee['employee_id'],
+            "name": employee['full_name'],
+            "email": employee['email'],
+            "department": employee['department']
+        },
+        "leave_balance": employee.get('leave_balance', {}),
+        "events": calendar_events,
+        "color_legend": leave_colors,
+        "status_legend": status_styles
+    }
+
+@api_router.get("/leaves/calendar/me")
+async def get_my_leaves_for_calendar(
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+    current_user: UserPublic = Depends(get_current_user)
+):
+    """Get current user's leaves for calendar display"""
+    return await get_employee_leaves_for_calendar(
+        employee_id=current_user.employee_id,
+        year=year,
+        month=month,
+        current_user=current_user
+    )
+
 
 # ============================================
 # ADDITIONAL: DELETE LEAVE ENDPOINT
