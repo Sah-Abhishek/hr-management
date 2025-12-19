@@ -39,11 +39,12 @@ const ReportsPage = () => {
         api.get('/leaves/all'),
         api.get('/organizations')
       ]);
-      
+
       setEmployees(empRes.data);
       setLeaves(leavesRes.data);
       setOrganizations(orgsRes.data);
-      
+      console.log("This is the data from the leaves api: ", leavesRes.data)
+
       // Extract unique departments
       const depts = [...new Set(empRes.data.map(emp => emp.department))];
       setDepartments(depts);
@@ -57,14 +58,14 @@ const ReportsPage = () => {
 
   const filterLeaves = () => {
     let filtered = [...leaves];
-    
+
     // Filter by month
     if (filters.month) {
       const [year, month] = filters.month.split('-');
       filtered = filtered.filter(leave => {
         const leaveDate = new Date(leave.start_date);
-        return leaveDate.getFullYear() === parseInt(year) && 
-               leaveDate.getMonth() === parseInt(month) - 1;
+        return leaveDate.getFullYear() === parseInt(year) &&
+          leaveDate.getMonth() === parseInt(month) - 1;
       });
     }
 
@@ -97,16 +98,16 @@ const ReportsPage = () => {
 
   const exportToCSV = () => {
     setGenerating(true);
-    
+
     try {
       const filteredLeaves = filterLeaves();
-      
+
       if (filteredLeaves.length === 0) {
         toast.error('No data to export');
         setGenerating(false);
         return;
       }
-      
+
       // Prepare CSV data
       const csvData = filteredLeaves.map(leave => {
         const employee = employees.find(e => e.id === leave.employee_id);
@@ -127,19 +128,19 @@ const ReportsPage = () => {
 
       // Convert to CSV
       const csv = Papa.unparse(csvData);
-      
+
       // Create and download file
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
-      
+
       link.setAttribute('href', url);
       link.setAttribute('download', `leave_report_${filters.month}_${Date.now()}.csv`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast.success('Report exported successfully!');
     } catch (error) {
       console.error('Error generating CSV:', error);
@@ -317,7 +318,8 @@ const ReportsPage = () => {
                   </div>
                 ) : (
                   filteredLeaves.slice(0, 10).map(leave => {
-                    const employee = employees.find(e => e.id === leave.employee_id);
+                    const employee = employees.find(e => e.email === leave.employee_email);
+                    console.log("This is the employee: ", employee)
                     return (
                       <div key={leave.id} className="border border-slate-200 rounded-lg p-4 bg-white">
                         <div className="flex justify-between items-start mb-2">
@@ -325,11 +327,10 @@ const ReportsPage = () => {
                             <h4 className="font-semibold text-slate-900">{employee?.full_name || 'N/A'}</h4>
                             <p className="text-sm text-slate-600">{employee?.department || 'N/A'}</p>
                           </div>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            leave.status === 'approved' ? 'bg-green-100 text-green-700' :
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${leave.status === 'approved' ? 'bg-green-100 text-green-700' :
                             leave.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                            'bg-orange-100 text-orange-700'
-                          }`}>
+                              'bg-orange-100 text-orange-700'
+                            }`}>
                             {leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}
                           </span>
                         </div>

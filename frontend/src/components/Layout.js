@@ -11,7 +11,7 @@ const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const { user } = getAuth();
-  console.log("This is the user: ", user)
+  // console.log("This is the user: ", user)
   // console.log("This is the currentUser: ", currentUser.role)
 
   useEffect(() => {
@@ -55,7 +55,7 @@ const Layout = () => {
     item.roles.includes(user?.role)
   );
 
-  console.log("This is the filtered navigation: ", filteredNavigation)
+  // console.log("This is the filtered navigation: ", filteredNavigation)
 
   const isActive = (href) => {
     if (href === '/') {

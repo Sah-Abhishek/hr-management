@@ -269,11 +269,10 @@ const ApprovalsPage = () => {
               <Button
                 onClick={handleAction}
                 data-testid="confirm-action-btn"
-                className={`flex-1 ${
-                  actionDialog.action === 'approve'
+                className={`flex-1 ${actionDialog.action === 'approve'
                     ? 'bg-emerald-600 hover:bg-emerald-700'
                     : 'bg-red-600 hover:bg-red-700'
-                }`}
+                  }`}
                 disabled={submitting}
               >
                 {submitting ? 'Processing...' : 'Confirm'}

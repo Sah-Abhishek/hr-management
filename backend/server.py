@@ -27,16 +27,24 @@ load_dotenv(ROOT_DIR / '.env')
 SETUP_CONFIG_FILE = ROOT_DIR / 'setup_config.json'
 import json
 
+def log_setup_status():
+    status = is_setup_completed()
+    color = "\033[1;36m" if status else "\033[1;31m"  # cyan / red
+
+    print(f"{color}[HRMS SETUP] setup_completed = {status}\033[0m")
+
+# def is_setup_completed():
+#     """Check if initial setup is completed"""
+#     try:
+#         if SETUP_CONFIG_FILE.exists():
+#             with open(SETUP_CONFIG_FILE, 'r') as f:
+#                 config = json.load(f)
+#                 return config.get('setup_completed', False)
+#     except:
+#         pass
+#     return False
 def is_setup_completed():
-    """Check if initial setup is completed"""
-    try:
-        if SETUP_CONFIG_FILE.exists():
-            with open(SETUP_CONFIG_FILE, 'r') as f:
-                config = json.load(f)
-                return config.get('setup_completed', False)
-    except:
-        pass
-    return False
+    return True
 
 def mark_setup_completed():
     """Mark setup as completed"""
@@ -62,6 +70,8 @@ security = HTTPBearer()
 
 # Create the main app
 app = FastAPI()
+log_setup_status()
+
 api_router = APIRouter(prefix="/api")
 
 # ============= MODELS =============
@@ -3427,7 +3437,8 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    # allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
