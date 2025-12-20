@@ -3044,54 +3044,73 @@ async def get_notification_settings(
         return NotificationSettings().model_dump()
     return settings
 
-async def send_email_notification(to_email: str, subject: str, html_content: str):
-    """Send email using Resend API"""
+async def send_email_notification(to_email: str, subject: str, html_content: str) -> bool:
+    """
+    Send email using Mailjet REST API.
+    Reads credentials from environment variables.
+
+    Args:
+        to_email: Recipient email address
+        subject: Email subject
+        html_content: HTML body of the email
+
+    Returns:
+        True if email sent successfully, False otherwise
+    """
     try:
-        # Get settings from database
-        settings = await db.notification_settings.find_one({}, {"_id": 0})
-        if not settings or not settings.get("email_enabled"):
-            logger.info("Email notifications disabled")
+        # Get Mailjet credentials from environment
+        api_key = os.environ.get("MAILJET_API_KEY")
+        api_secret = os.environ.get("MAILJET_API_SECRET")
+        from_email = os.environ.get("MAILJET_FROM_EMAIL")
+        from_name = os.environ.get("MAILJET_FROM_NAME", "HRMS System")
+
+        if not api_key or not api_secret:
+            logger.error("Mailjet credentials not configured in environment")
             return False
-        
-        # Use Resend if using Resend API key
-        if settings.get("from_email", "").endswith("@resend.dev") or os.environ.get("RESEND_API_KEY"):
-            resend.api_key = os.environ.get("RESEND_API_KEY") or settings.get("smtp_password")
-            params = {
-                "from": settings.get("from_email", "onboarding@resend.dev"),
-                "to": [to_email],
-                "subject": subject,
-                "html": html_content
+
+        if not from_email:
+            logger.error("From email not configured in environment")
+            return False
+
+        # Import Mailjet client
+        from mailjet_rest import Client
+
+        def send_mailjet():
+            mailjet = Client(auth=(api_key, api_secret), version="v3.1")
+            data = {
+                "Messages": [
+                    {
+                        "From": {
+                            "Email": from_email,
+                            "Name": from_name
+                        },
+                        "To": [
+                            {
+                                "Email": to_email
+                            }
+                        ],
+                        "Subject": subject,
+                        "HTMLPart": html_content
+                    }
+                ]
             }
-            email = await asyncio.to_thread(resend.Emails.send, params)
-            logger.info(f"Email sent to {to_email} via Resend: {email.get('id')}")
+            result = mailjet.send.create(data=data)
+            return result.status_code, result.json()
+
+        # Run in thread to avoid blocking
+        status_code, response = await asyncio.to_thread(send_mailjet)
+
+        if status_code == 200:
+            logger.info(f"Email sent to {to_email} via Mailjet")
             return True
         else:
-            # Use SMTP for other providers
-            import smtplib
-            from email.mime.text import MIMEText
-            from email.mime.multipart import MIMEMultipart
-            
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = f"{settings.get('from_name')} <{settings.get('from_email')}>"
-            msg['To'] = to_email
-            
-            html_part = MIMEText(html_content, 'html')
-            msg.attach(html_part)
-            
-            def send_smtp():
-                with smtplib.SMTP(settings.get('smtp_host'), settings.get('smtp_port', 587)) as server:
-                    server.starttls()
-                    server.login(settings.get('smtp_username'), settings.get('smtp_password'))
-                    server.send_message(msg)
-            
-            await asyncio.to_thread(send_smtp)
-            logger.info(f"Email sent to {to_email} via SMTP")
-            return True
-            
+            logger.error(f"Mailjet error: {response}")
+            return False
+
     except Exception as e:
         logger.error(f"Failed to send email to {to_email}: {str(e)}")
         return False
+
 
 async def send_whatsapp_notification(to_phone: str, message: str):
     """Send WhatsApp message using Twilio"""
